@@ -1,0 +1,1715 @@
+================================================================================
+                        WMB TRACKER BACKEND API DOCUMENTATION
+================================================================================
+
+Bu dokümantasyon, WMB Tracker Backend API'sinin tüm endpoint'lerini ve kullanım 
+şekillerini detaylıca açıklamaktadır. Frontend geliştiricileri bu dokümantasyonu 
+kullanarak API ile nasıl etkileşim kuracaklarını öğrenebilirler.
+
+================================================================================
+                                GENEL BİLGİLER
+================================================================================
+
+Base URL: http://localhost:3000
+Authentication: Cookie-based (session_token)
+Content-Type: application/json
+
+Tüm endpoint'ler authentication gerektirir ve kullanıcının ilgili permission'a 
+sahip olması gerekir.
+
+================================================================================
+                                1. AUTH ROUTES
+================================================================================
+
+Base Path: /auth
+
+1.1. KULLANICI KAYDI
+--------------------
+POST /auth/register
+Açıklama: Yeni kullanıcı kaydı oluşturur
+Authentication: Gerekli değil
+Permission: Gerekli değil
+
+Request Body:
+{
+  "name": "string (zorunlu)",
+  "email": "string (zorunlu, email formatında)",
+  "password": "string (zorunlu)",
+  "role": "string (zorunlu, ObjectId)",
+  "branch": "string (opsiyonel, ObjectId)"
+}
+
+Response:
+{
+  "message": "User created successfully",
+  "user": {
+    "id": "ObjectId",
+    "name": "string",
+    "email": "string",
+    "role": "ObjectId",
+    "branch": "ObjectId"
+  }
+}
+
+1.2. KULLANICI GİRİŞİ
+---------------------
+POST /auth/login
+Açıklama: Kullanıcı girişi yapar ve session oluşturur
+Authentication: Gerekli değil
+Permission: Gerekli değil
+
+Request Body:
+{
+  "email": "string (zorunlu)",
+  "password": "string (zorunlu)"
+}
+
+Response:
+{
+  "message": "Login successful",
+  "user": {
+    "id": "ObjectId",
+    "name": "string",
+    "email": "string",
+    "role": "ObjectId",
+    "branch": "ObjectId"
+  },
+  "sessionToken": "string"
+}
+
+1.3. KULLANICI ÇIKIŞI
+---------------------
+POST /auth/logout
+Açıklama: Kullanıcı çıkışı yapar ve session'ı siler
+Authentication: Gerekli
+Permission: Gerekli değil
+
+Request Body: Yok
+
+Response:
+{
+  "message": "Logout successful"
+}
+
+1.4. MEVCUT KULLANICI BİLGİLERİ
+-------------------------------
+GET /auth/me
+Açıklama: Giriş yapmış kullanıcının bilgilerini getirir
+Authentication: Gerekli
+Permission: Gerekli değil
+
+Request Body: Yok
+
+Response:
+{
+  "user": {
+    "id": "ObjectId",
+    "name": "string",
+    "email": "string",
+    "role": "ObjectId"
+  }
+}
+
+1.5. TÜM KULLANICILARI LİSTELE
+------------------------------
+GET /auth/users
+Açıklama: Sistemdeki tüm kullanıcıları listeler
+Authentication: Gerekli
+Permission: Gerekli değil (sadece admin rolü)
+
+Request Body: Yok
+
+Response:
+{
+  "message": "Users retrieved successfully",
+  "users": [
+    {
+      "id": "ObjectId",
+      "name": "string",
+      "email": "string",
+      "role": "ObjectId",
+      "createdAt": "Date"
+    }
+  ]
+}
+
+================================================================================
+                            2. ROLE PERMISSION ROUTES
+================================================================================
+
+Base Path: /role-permission
+
+2.1. PERMISSION YÖNETİMİ
+------------------------
+
+2.1.1. İZİN OLUŞTURMA
+---------------------
+POST /role-permission/permissions
+Açıklama: Yeni izin oluşturur
+Authentication: Gerekli
+Permission: "izin oluşturma"
+
+Request Body:
+{
+  "name": "string (zorunlu)",
+  "description": "string (opsiyonel)"
+}
+
+Response:
+{
+  "message": "Permission created successfully",
+  "perm": {
+    "_id": "ObjectId",
+    "name": "string",
+    "description": "string",
+    "createdAt": "Date",
+    "updatedAt": "Date"
+  }
+}
+
+2.1.2. İZİNLERİ LİSTELE
+-----------------------
+GET /role-permission/permissions
+Açıklama: Tüm izinleri listeler
+Authentication: Gerekli
+Permission: "izin listeleme"
+
+Request Body: Yok
+
+Response:
+[
+  {
+    "_id": "ObjectId",
+    "name": "string",
+    "description": "string",
+    "createdAt": "Date",
+    "updatedAt": "Date"
+  }
+]
+
+2.1.3. İZİN GÜNCELLEME
+-----------------------
+PUT /role-permission/permissions/:id
+Açıklama: İzin bilgilerini günceller
+Authentication: Gerekli
+Permission: "izin güncelleme"
+
+Request Body:
+{
+  "name": "string (opsiyonel)",
+  "description": "string (opsiyonel)"
+}
+
+Response:
+{
+  "message": "Permission updated successfully",
+  "updated": {
+    "_id": "ObjectId",
+    "name": "string",
+    "description": "string"
+  }
+}
+
+2.1.4. İZİN SİLME
+-----------------
+DELETE /role-permission/permissions/:id
+Açıklama: İzni siler
+Authentication: Gerekli
+Permission: "izin silme"
+
+Request Body: Yok
+
+Response:
+{
+  "message": "Permission deleted successfully"
+}
+
+2.2. ROLE YÖNETİMİ
+------------------
+
+2.2.1. ROL OLUŞTURMA
+--------------------
+POST /role-permission/roles
+Açıklama: Yeni rol oluşturur (GLOBAL veya BRANCH)
+Authentication: Gerekli
+Permission: "rol oluşturma"
+
+Request Body:
+{
+  "name": "string (zorunlu)",
+  "scope": "GLOBAL | BRANCH (opsiyonel, default: BRANCH)",
+  "branch": "string (opsiyonel, BRANCH scope için gerekli)"
+}
+
+Response:
+{
+  "message": "Role created successfully",
+  "role": {
+    "_id": "ObjectId",
+    "name": "string",
+    "scope": "GLOBAL | BRANCH",
+    "branch": "ObjectId | null",
+    "permissions": [],
+    "createdAt": "Date",
+    "updatedAt": "Date"
+  }
+}
+
+2.2.2. ROLLERİ LİSTELE
+----------------------
+GET /role-permission/roles
+Açıklama: Tüm rolleri listeler
+Authentication: Gerekli
+Permission: "rol listeleme"
+
+Request Body: Yok
+
+Response:
+[
+  {
+    "_id": "ObjectId",
+    "name": "string",
+    "scope": "GLOBAL | BRANCH",
+    "branch": "ObjectId | null",
+    "permissions": ["ObjectId"],
+    "createdAt": "Date",
+    "updatedAt": "Date"
+  }
+]
+
+2.2.3. ROL GÜNCELLEME
+---------------------
+PUT /role-permission/roles/:id
+Açıklama: Rol bilgilerini günceller
+Authentication: Gerekli
+Permission: "rol güncelleme"
+
+Request Body:
+{
+  "name": "string (opsiyonel)",
+  "scope": "GLOBAL | BRANCH (opsiyonel)",
+  "branch": "string (opsiyonel)"
+}
+
+Response:
+{
+  "message": "Role updated successfully",
+  "updated": {
+    "_id": "ObjectId",
+    "name": "string",
+    "scope": "GLOBAL | BRANCH",
+    "branch": "ObjectId | null"
+  }
+}
+
+2.2.4. ROL SİLME
+----------------
+DELETE /role-permission/roles/:id
+Açıklama: Rolü siler
+Authentication: Gerekli
+Permission: "rol silme"
+
+Request Body: Yok
+
+Response:
+{
+  "message": "Role deleted successfully"
+}
+
+2.3. ROLE-PERMISSION İLİŞKİLERİ
+--------------------------------
+
+2.3.1. ROLE'E İZİN ATAMA
+------------------------
+POST /role-permission/roles/:roleId/permissions/:permissionId
+Açıklama: Role izin atar
+Authentication: Gerekli
+Permission: "role izin atama"
+
+Request Body:
+{
+  "branch": "string (opsiyonel, BRANCH scope için gerekli)",
+  "createdBy": "string (opsiyonel)"
+}
+
+Response:
+{
+  "message": "Permission assigned to role",
+  "result": {
+    "_id": "ObjectId",
+    "role": "ObjectId",
+    "permission": "ObjectId",
+    "branch": "ObjectId | null",
+    "createdBy": "ObjectId | null"
+  }
+}
+
+2.3.2. ROLE'DEN İZİN KALDIRMA
+-----------------------------
+DELETE /role-permission/roles/:roleId/permissions/:permissionId
+Açıklama: Role'den izin kaldırır
+Authentication: Gerekli
+Permission: "role izin kaldırma"
+
+Request Body: Yok
+
+Response:
+{
+  "message": "Permission removed from role"
+}
+
+2.3.3. ROLE İZİNLERİNİ LİSTELE
+------------------------------
+GET /role-permission/roles/:roleId/permissions
+Açıklama: Role ait tüm izinleri listeler
+Authentication: Gerekli
+Permission: "role izin listeleme"
+
+Request Body: Yok
+
+Response:
+[
+  {
+    "_id": "ObjectId",
+    "role": "ObjectId",
+    "permission": {
+      "_id": "ObjectId",
+      "name": "string",
+      "description": "string"
+    },
+    "branch": "ObjectId | null"
+  }
+]
+
+================================================================================
+                            3. COMPANY BRANCH ROUTES
+================================================================================
+
+Base Path: /companies-branches
+
+3.1. COMPANY YÖNETİMİ
+----------------------
+
+3.1.1. ŞİRKETLERİ LİSTELE
+-------------------------
+GET /companies-branches/companies
+Açıklama: Tüm şirketleri listeler
+Authentication: Gerekli
+Permission: "şirket listeleme"
+
+Request Body: Yok
+
+Response:
+{
+  "message": "Companies retrieved successfully",
+  "companies": [
+    {
+      "_id": "ObjectId",
+      "name": "string",
+      "email": "string",
+      "address": "string",
+      "phone": "string",
+      "isDeleted": "boolean",
+      "deletedAt": "Date | null",
+      "createdAt": "Date",
+      "updatedAt": "Date"
+    }
+  ]
+}
+
+3.1.2. ŞİRKET OLUŞTURMA
+-----------------------
+POST /companies-branches/companies
+Açıklama: Yeni şirket oluşturur
+Authentication: Gerekli
+Permission: "şirket oluşturma"
+
+Request Body:
+{
+  "name": "string (zorunlu)",
+  "email": "string (zorunlu, email formatında)",
+  "address": "string (opsiyonel)",
+  "phone": "string (opsiyonel)"
+}
+
+Response:
+{
+  "message": "Company created successfully",
+  "company": {
+    "_id": "ObjectId",
+    "name": "string",
+    "email": "string",
+    "address": "string",
+    "phone": "string",
+    "isDeleted": "boolean",
+    "deletedAt": "Date | null",
+    "createdAt": "Date",
+    "updatedAt": "Date"
+  }
+}
+
+3.1.3. ŞİRKET DETAYI
+--------------------
+GET /companies-branches/companies/:id
+Açıklama: Belirli bir şirketin detaylarını getirir
+Authentication: Gerekli
+Permission: "şirket görüntüleme"
+
+Request Body: Yok
+
+Response:
+{
+  "message": "Company retrieved successfully",
+  "company": {
+    "_id": "ObjectId",
+    "name": "string",
+    "email": "string",
+    "address": "string",
+    "phone": "string",
+    "isDeleted": "boolean",
+    "deletedAt": "Date | null",
+    "createdAt": "Date",
+    "updatedAt": "Date"
+  }
+}
+
+3.1.4. ŞİRKET GÜNCELLEME
+------------------------
+PUT /companies-branches/companies/:id
+Açıklama: Şirket bilgilerini günceller
+Authentication: Gerekli
+Permission: "şirket güncelleme"
+
+Request Body:
+{
+  "name": "string (opsiyonel)",
+  "email": "string (opsiyonel, email formatında)",
+  "address": "string (opsiyonel)",
+  "phone": "string (opsiyonel)"
+}
+
+Response:
+{
+  "message": "Company updated successfully",
+  "company": {
+    "_id": "ObjectId",
+    "name": "string",
+    "email": "string",
+    "address": "string",
+    "phone": "string"
+  }
+}
+
+3.1.5. ŞİRKET SİLME (SOFT DELETE)
+---------------------------------
+DELETE /companies-branches/companies/:id
+Açıklama: Şirketi soft delete ile siler
+Authentication: Gerekli
+Permission: "şirket silme"
+
+Request Body: Yok
+
+Response:
+{
+  "message": "Company soft deleted successfully",
+  "company": {
+    "_id": "ObjectId",
+    "isDeleted": "true",
+    "deletedAt": "Date"
+  }
+}
+
+3.1.6. SİLİNMİŞ ŞİRKETLERİ LİSTELE
+----------------------------------
+GET /companies-branches/companies/deleted/all
+Açıklama: Soft delete edilmiş şirketleri listeler
+Authentication: Gerekli
+Permission: "şirket listeleme"
+
+Request Body: Yok
+
+Response:
+{
+  "message": "Deleted companies retrieved successfully",
+  "deletedCompanies": [
+    {
+      "_id": "ObjectId",
+      "name": "string",
+      "email": "string",
+      "isDeleted": "true",
+      "deletedAt": "Date"
+    }
+  ]
+}
+
+3.1.7. ŞİRKET GERİ YÜKLEME
+--------------------------
+PATCH /companies-branches/companies/:id/restore
+Açıklama: Soft delete edilmiş şirketi geri aktif hale getirir
+Authentication: Gerekli
+Permission: "şirket güncelleme"
+
+Request Body: Yok
+
+Response:
+{
+  "message": "Company restored successfully",
+  "restored": {
+    "_id": "ObjectId",
+    "isDeleted": "false",
+    "deletedAt": "null"
+  }
+}
+
+3.2. BRANCH YÖNETİMİ
+--------------------
+
+3.2.1. ŞUBELERİ LİSTELE
+-----------------------
+GET /companies-branches/branches
+Açıklama: Tüm şubeleri veya belirli bir şirkete ait olanları listeler
+Authentication: Gerekli
+Permission: "şube listeleme"
+
+Query Parameters:
+- company: string (opsiyonel, şirket ID'si)
+
+Request Body: Yok
+
+Response:
+{
+  "message": "Branches retrieved successfully",
+  "branches": [
+    {
+      "_id": "ObjectId",
+      "name": "string",
+      "address": "string",
+      "phone": "string",
+      "company": {
+        "_id": "ObjectId",
+        "name": "string",
+        "email": "string"
+      },
+      "manager": {
+        "_id": "ObjectId",
+        "name": "string",
+        "email": "string"
+      },
+      "tables": "number",
+      "createdAt": "Date",
+      "updatedAt": "Date"
+    }
+  ]
+}
+
+3.2.2. ŞUBE OLUŞTURMA
+---------------------
+POST /companies-branches/branches
+Açıklama: Yeni şube oluşturur
+Authentication: Gerekli
+Permission: "şube oluşturma"
+
+Request Body:
+{
+  "name": "string (zorunlu)",
+  "address": "string (opsiyonel)",
+  "phone": "string (opsiyonel)",
+  "company": "string (zorunlu, ObjectId)",
+  "manager": "string (opsiyonel, ObjectId)",
+  "tables": "number (opsiyonel)"
+}
+
+Response:
+{
+  "message": "Branch created successfully",
+  "branch": {
+    "_id": "ObjectId",
+    "name": "string",
+    "address": "string",
+    "phone": "string",
+    "company": "ObjectId",
+    "manager": "ObjectId | null",
+    "tables": "number",
+    "createdAt": "Date",
+    "updatedAt": "Date"
+  }
+}
+
+3.2.3. ŞUBE DETAYI
+------------------
+GET /companies-branches/branches/:id
+Açıklama: Belirli bir şubenin detaylarını getirir
+Authentication: Gerekli
+Permission: "şube görüntüleme"
+
+Request Body: Yok
+
+Response:
+{
+  "message": "Branch retrieved successfully",
+  "branch": {
+    "_id": "ObjectId",
+    "name": "string",
+    "address": "string",
+    "phone": "string",
+    "company": {
+      "_id": "ObjectId",
+      "name": "string",
+      "email": "string"
+    },
+    "manager": {
+      "_id": "ObjectId",
+      "name": "string",
+      "email": "string"
+    },
+    "tables": "number",
+    "createdAt": "Date",
+    "updatedAt": "Date"
+  }
+}
+
+3.2.4. ŞUBE GÜNCELLEME
+----------------------
+PUT /companies-branches/branches/:id
+Açıklama: Şube bilgilerini günceller
+Authentication: Gerekli
+Permission: "şube güncelleme"
+
+Request Body:
+{
+  "name": "string (opsiyonel)",
+  "address": "string (opsiyonel)",
+  "phone": "string (opsiyonel)",
+  "manager": "string (opsiyonel, ObjectId)",
+  "tables": "number (opsiyonel)"
+}
+
+Response:
+{
+  "message": "Branch updated successfully",
+  "branch": {
+    "_id": "ObjectId",
+    "name": "string",
+    "address": "string",
+    "phone": "string",
+    "company": "ObjectId",
+    "manager": "ObjectId | null",
+    "tables": "number"
+  }
+}
+
+3.2.5. ŞUBE MASA SAYISI GÜNCELLEME
+----------------------------------
+PATCH /companies-branches/branches/:id/tables
+Açıklama: Belirli bir şubenin sadece masa sayısını günceller
+Authentication: Gerekli
+Permission: "şube masa sayısı güncelleme"
+
+Request Body:
+{
+  "tables": "number (zorunlu)"
+}
+
+Response:
+{
+  "message": "Branch tables updated successfully",
+  "branch": {
+    "_id": "ObjectId",
+    "tables": "number"
+  }
+}
+
+3.2.6. ŞUBE SİLME
+-----------------
+DELETE /companies-branches/branches/:id
+Açıklama: Şubeyi sistemden siler
+Authentication: Gerekli
+Permission: "şube silme"
+
+Request Body: Yok
+
+Response:
+{
+  "message": "Branch deleted successfully"
+}
+
+================================================================================
+                            4. CATEGORY PRODUCT ROUTES
+================================================================================
+
+Base Path: /category-product
+
+4.1. CATEGORY YÖNETİMİ
+-----------------------
+
+4.1.1. KATEGORİLERİ LİSTELE
+---------------------------
+GET /category-product/categories
+Açıklama: Kategorileri listeler (hierarchical yapı)
+Authentication: Gerekli
+Permission: "kategori listeleme"
+
+Query Parameters:
+- branch: string (opsiyonel, şube ID'si)
+- company: string (opsiyonel, şirket ID'si)
+
+Request Body: Yok
+
+Response:
+{
+  "message": "Categories retrieved successfully",
+  "categories": [
+    {
+      "_id": "ObjectId",
+      "name": "string",
+      "parent": {
+        "_id": "ObjectId",
+        "name": "string"
+      } | null,
+      "company": {
+        "_id": "ObjectId",
+        "name": "string"
+      },
+      "branch": {
+        "_id": "ObjectId",
+        "name": "string"
+      },
+      "createdAt": "Date",
+      "updatedAt": "Date"
+    }
+  ]
+}
+
+4.1.2. KATEGORİ OLUŞTURMA
+-------------------------
+POST /category-product/categories
+Açıklama: Yeni kategori oluşturur
+Authentication: Gerekli
+Permission: "kategori oluşturma"
+
+Request Body:
+{
+  "name": "string (zorunlu)",
+  "parent": "string (opsiyonel, ObjectId)",
+  "company": "string (zorunlu, ObjectId)",
+  "branch": "string (zorunlu, ObjectId)"
+}
+
+Response:
+{
+  "message": "Category created successfully",
+  "category": {
+    "_id": "ObjectId",
+    "name": "string",
+    "parent": "ObjectId | null",
+    "company": "ObjectId",
+    "branch": "ObjectId",
+    "createdAt": "Date",
+    "updatedAt": "Date"
+  }
+}
+
+4.1.3. KATEGORİ DETAYI
+----------------------
+GET /category-product/categories/:id
+Açıklama: Belirli bir kategorinin detaylarını getirir
+Authentication: Gerekli
+Permission: "kategori görüntüleme"
+
+Request Body: Yok
+
+Response:
+{
+  "message": "Category retrieved successfully",
+  "category": {
+    "_id": "ObjectId",
+    "name": "string",
+    "parent": {
+      "_id": "ObjectId",
+      "name": "string"
+    } | null,
+    "company": {
+      "_id": "ObjectId",
+      "name": "string"
+    },
+    "branch": {
+      "_id": "ObjectId",
+      "name": "string"
+    },
+    "createdAt": "Date",
+    "updatedAt": "Date"
+  }
+}
+
+4.1.4. KATEGORİ GÜNCELLEME
+--------------------------
+PUT /category-product/categories/:id
+Açıklama: Kategori bilgilerini günceller
+Authentication: Gerekli
+Permission: "kategori güncelleme"
+
+Request Body:
+{
+  "name": "string (opsiyonel)",
+  "parent": "string (opsiyonel, ObjectId)"
+}
+
+Response:
+{
+  "message": "Category updated successfully",
+  "category": {
+    "_id": "ObjectId",
+    "name": "string",
+    "parent": "ObjectId | null"
+  }
+}
+
+4.1.5. KATEGORİ TAŞIMA
+---------------------
+PATCH /category-product/categories/:id/move
+Açıklama: Kategoriyi başka bir kategoriye taşır
+Authentication: Gerekli
+Permission: "kategori taşıma"
+
+Request Body:
+{
+  "newParent": "string (zorunlu, ObjectId)"
+}
+
+Response:
+{
+  "message": "Category moved successfully",
+  "category": {
+    "_id": "ObjectId",
+    "parent": "ObjectId"
+  }
+}
+
+4.1.6. KATEGORİ SİLME
+---------------------
+DELETE /category-product/categories/:id
+Açıklama: Kategoriyi siler (alt kategorileri de siler)
+Authentication: Gerekli
+Permission: "kategori silme"
+
+Request Body: Yok
+
+Response:
+{
+  "message": "Category deleted successfully"
+}
+
+4.2. PRODUCT YÖNETİMİ
+---------------------
+
+4.2.1. ÜRÜNLERİ LİSTELE
+-----------------------
+GET /category-product/products
+Açıklama: Ürünleri listeler
+Authentication: Gerekli
+Permission: "ürün listeleme"
+
+Query Parameters:
+- category: string (opsiyonel, kategori ID'si)
+- branch: string (opsiyonel, şube ID'si)
+- company: string (opsiyonel, şirket ID'si)
+
+Request Body: Yok
+
+Response:
+{
+  "message": "Products retrieved successfully",
+  "products": [
+    {
+      "_id": "ObjectId",
+      "name": "string",
+      "category": {
+        "_id": "ObjectId",
+        "name": "string"
+      },
+      "kitchen": {
+        "_id": "ObjectId",
+        "name": "string"
+      },
+      "defaultSalesMethod": {
+        "_id": "ObjectId",
+        "name": "string"
+      },
+      "isActive": "boolean",
+      "createdAt": "Date",
+      "updatedAt": "Date"
+    }
+  ]
+}
+
+4.2.2. ÜRÜN OLUŞTURMA
+--------------------
+POST /category-product/products
+Açıklama: Yeni ürün oluşturur
+Authentication: Gerekli
+Permission: "ürün oluşturma"
+
+Request Body:
+{
+  "name": "string (zorunlu)",
+  "category": "string (zorunlu, ObjectId)",
+  "kitchen": "string (zorunlu, ObjectId)",
+  "defaultSalesMethod": "string (zorunlu, ObjectId)"
+}
+
+Response:
+{
+  "message": "Product created successfully",
+  "product": {
+    "_id": "ObjectId",
+    "name": "string",
+    "category": "ObjectId",
+    "kitchen": "ObjectId",
+    "defaultSalesMethod": "ObjectId",
+    "isActive": "boolean",
+    "createdAt": "Date",
+    "updatedAt": "Date"
+  }
+}
+
+4.2.3. ÜRÜN DETAYI
+------------------
+GET /category-product/products/:id
+Açıklama: Belirli bir ürünün detaylarını getirir
+Authentication: Gerekli
+Permission: "ürün görüntüleme"
+
+Request Body: Yok
+
+Response:
+{
+  "message": "Product retrieved successfully",
+  "product": {
+    "_id": "ObjectId",
+    "name": "string",
+    "category": {
+      "_id": "ObjectId",
+      "name": "string"
+    },
+    "kitchen": {
+      "_id": "ObjectId",
+      "name": "string"
+    },
+    "defaultSalesMethod": {
+      "_id": "ObjectId",
+      "name": "string"
+    },
+    "isActive": "boolean",
+    "createdAt": "Date",
+    "updatedAt": "Date"
+  }
+}
+
+4.2.4. ÜRÜN GÜNCELLEME
+----------------------
+PUT /category-product/products/:id
+Açıklama: Ürün bilgilerini günceller
+Authentication: Gerekli
+Permission: "ürün güncelleme"
+
+Request Body:
+{
+  "name": "string (opsiyonel)",
+  "category": "string (opsiyonel, ObjectId)",
+  "kitchen": "string (opsiyonel, ObjectId)",
+  "defaultSalesMethod": "string (opsiyonel, ObjectId)",
+  "isActive": "boolean (opsiyonel)"
+}
+
+Response:
+{
+  "message": "Product updated successfully",
+  "product": {
+    "_id": "ObjectId",
+    "name": "string",
+    "category": "ObjectId",
+    "kitchen": "ObjectId",
+    "defaultSalesMethod": "ObjectId",
+    "isActive": "boolean"
+  }
+}
+
+4.2.5. ÜRÜN KATEGORİ DEĞİŞTİRME
+-------------------------------
+PATCH /category-product/products/:id/category
+Açıklama: Ürünün kategorisini değiştirir
+Authentication: Gerekli
+Permission: "ürün kategori değiştirme"
+
+Request Body:
+{
+  "newCategory": "string (zorunlu, ObjectId)"
+}
+
+Response:
+{
+  "message": "Product category changed successfully",
+  "product": {
+    "_id": "ObjectId",
+    "category": "ObjectId"
+  }
+}
+
+4.2.6. ÜRÜN AKTİF/PASİF DURUMU
+------------------------------
+PATCH /category-product/products/:id/active
+Açıklama: Ürünün aktif/pasif durumunu değiştirir
+Authentication: Gerekli
+Permission: "ürün güncelleme"
+
+Request Body: Yok
+
+Response:
+{
+  "message": "Product active status toggled successfully",
+  "product": {
+    "_id": "ObjectId",
+    "isActive": "boolean"
+  }
+}
+
+4.2.7. ÜRÜN SİLME
+-----------------
+DELETE /category-product/products/:id
+Açıklama: Ürünü siler
+Authentication: Gerekli
+Permission: "ürün silme"
+
+Request Body: Yok
+
+Response:
+{
+  "message": "Product deleted successfully"
+}
+
+4.3. KITCHEN YÖNETİMİ
+---------------------
+
+4.3.1. MUTFAKLARI LİSTELE
+-------------------------
+GET /category-product/kitchens
+Açıklama: Mutfakları listeler
+Authentication: Gerekli
+Permission: "mutfak listeleme"
+
+Query Parameters:
+- branch: string (opsiyonel, şube ID'si)
+- company: string (opsiyonel, şirket ID'si)
+
+Request Body: Yok
+
+Response:
+{
+  "message": "Kitchens retrieved successfully",
+  "kitchens": [
+    {
+      "_id": "ObjectId",
+      "name": "string",
+      "company": {
+        "_id": "ObjectId",
+        "name": "string"
+      },
+      "branch": {
+        "_id": "ObjectId",
+        "name": "string"
+      },
+      "createdAt": "Date",
+      "updatedAt": "Date"
+    }
+  ]
+}
+
+4.3.2. MUTFAK OLUŞTURMA
+-----------------------
+POST /category-product/kitchens
+Açıklama: Yeni mutfak oluşturur
+Authentication: Gerekli
+Permission: "mutfak oluşturma"
+
+Request Body:
+{
+  "name": "string (zorunlu)",
+  "company": "string (zorunlu, ObjectId)",
+  "branch": "string (zorunlu, ObjectId)"
+}
+
+Response:
+{
+  "message": "Kitchen created successfully",
+  "kitchen": {
+    "_id": "ObjectId",
+    "name": "string",
+    "company": "ObjectId",
+    "branch": "ObjectId",
+    "createdAt": "Date",
+    "updatedAt": "Date"
+  }
+}
+
+4.3.3. MUTFAK DETAYI
+--------------------
+GET /category-product/kitchens/:id
+Açıklama: Belirli bir mutfağın detaylarını getirir
+Authentication: Gerekli
+Permission: "mutfak listeleme"
+
+Request Body: Yok
+
+Response:
+{
+  "message": "Kitchen retrieved successfully",
+  "kitchen": {
+    "_id": "ObjectId",
+    "name": "string",
+    "company": {
+      "_id": "ObjectId",
+      "name": "string"
+    },
+    "branch": {
+      "_id": "ObjectId",
+      "name": "string"
+    },
+    "createdAt": "Date",
+    "updatedAt": "Date"
+  }
+}
+
+4.3.4. MUTFAK GÜNCELLEME
+------------------------
+PUT /category-product/kitchens/:id
+Açıklama: Mutfak bilgilerini günceller
+Authentication: Gerekli
+Permission: "mutfak güncelleme"
+
+Request Body:
+{
+  "name": "string (opsiyonel)"
+}
+
+Response:
+{
+  "message": "Kitchen updated successfully",
+  "kitchen": {
+    "_id": "ObjectId",
+    "name": "string"
+  }
+}
+
+4.3.5. MUTFAK SİLME
+-------------------
+DELETE /category-product/kitchens/:id
+Açıklama: Mutfağı siler
+Authentication: Gerekli
+Permission: "mutfak silme"
+
+Request Body: Yok
+
+Response:
+{
+  "message": "Kitchen deleted successfully"
+}
+
+4.4. PRODUCT INGREDIENTS YÖNETİMİ
+----------------------------------
+
+4.4.1. ÜRÜN MALZEMELERİNİ LİSTELE
+---------------------------------
+GET /category-product/products/:id/ingredients
+Açıklama: Ürün malzemelerini listeler
+Authentication: Gerekli
+Permission: "malzeme listeleme"
+
+Request Body: Yok
+
+Response:
+{
+  "message": "Product ingredients retrieved successfully",
+  "ingredients": [
+    {
+      "_id": "ObjectId",
+      "name": "string",
+      "product": "ObjectId",
+      "amount": "number",
+      "amountUnit": {
+        "_id": "ObjectId",
+        "name": "string"
+      },
+      "price": "number",
+      "priceUnit": {
+        "_id": "ObjectId",
+        "name": "string"
+      },
+      "isDefault": "boolean",
+      "createdAt": "Date",
+      "updatedAt": "Date"
+    }
+  ]
+}
+
+4.4.2. ÜRÜN MALZEMESİ EKLE
+--------------------------
+POST /category-product/products/:id/ingredients
+Açıklama: Ürün malzemesi ekler
+Authentication: Gerekli
+Permission: "malzeme oluşturma"
+
+Request Body:
+{
+  "name": "string (zorunlu)",
+  "amount": "number (zorunlu)",
+  "amountUnit": "string (zorunlu, ObjectId)",
+  "price": "number (opsiyonel, default: 0)",
+  "priceUnit": "string (zorunlu, ObjectId)",
+  "isDefault": "boolean (opsiyonel, default: false)"
+}
+
+Response:
+{
+  "message": "Product ingredient created successfully",
+  "ingredient": {
+    "_id": "ObjectId",
+    "name": "string",
+    "product": "ObjectId",
+    "amount": "number",
+    "amountUnit": "ObjectId",
+    "price": "number",
+    "priceUnit": "ObjectId",
+    "isDefault": "boolean",
+    "createdAt": "Date",
+    "updatedAt": "Date"
+  }
+}
+
+4.4.3. MALZEME DETAYI
+---------------------
+GET /category-product/ingredients/:id
+Açıklama: Malzeme detayını getirir
+Authentication: Gerekli
+Permission: "malzeme listeleme"
+
+Request Body: Yok
+
+Response:
+{
+  "message": "Ingredient retrieved successfully",
+  "ingredient": {
+    "_id": "ObjectId",
+    "name": "string",
+    "product": {
+      "_id": "ObjectId",
+      "name": "string"
+    },
+    "amount": "number",
+    "amountUnit": {
+      "_id": "ObjectId",
+      "name": "string"
+    },
+    "price": "number",
+    "priceUnit": {
+      "_id": "ObjectId",
+      "name": "string"
+    },
+    "isDefault": "boolean",
+    "createdAt": "Date",
+    "updatedAt": "Date"
+  }
+}
+
+4.4.4. MALZEME GÜNCELLEME
+-------------------------
+PUT /category-product/ingredients/:id
+Açıklama: Malzeme bilgilerini günceller
+Authentication: Gerekli
+Permission: "malzeme güncelleme"
+
+Request Body:
+{
+  "name": "string (opsiyonel)",
+  "amount": "number (opsiyonel)",
+  "amountUnit": "string (opsiyonel, ObjectId)",
+  "price": "number (opsiyonel)",
+  "priceUnit": "string (opsiyonel, ObjectId)",
+  "isDefault": "boolean (opsiyonel)"
+}
+
+Response:
+{
+  "message": "Ingredient updated successfully",
+  "ingredient": {
+    "_id": "ObjectId",
+    "name": "string",
+    "amount": "number",
+    "amountUnit": "ObjectId",
+    "price": "number",
+    "priceUnit": "ObjectId",
+    "isDefault": "boolean"
+  }
+}
+
+4.4.5. MALZEME SİLME
+--------------------
+DELETE /category-product/ingredients/:id
+Açıklama: Malzemeyi siler
+Authentication: Gerekli
+Permission: "malzeme silme"
+
+Request Body: Yok
+
+Response:
+{
+  "message": "Ingredient deleted successfully"
+}
+
+4.5. PRODUCT PRICE YÖNETİMİ
+----------------------------
+
+4.5.1. ÜRÜN FİYATLARINI LİSTELE
+-------------------------------
+GET /category-product/products/:id/prices
+Açıklama: Ürün fiyatlarını listeler
+Authentication: Gerekli
+Permission: "fiyat listeleme"
+
+Request Body: Yok
+
+Response:
+{
+  "message": "Product prices retrieved successfully",
+  "prices": [
+    {
+      "_id": "ObjectId",
+      "product": "ObjectId",
+      "salesMethod": {
+        "_id": "ObjectId",
+        "name": "string"
+      },
+      "amount": "number",
+      "unit": {
+        "_id": "ObjectId",
+        "name": "string"
+      },
+      "createdAt": "Date",
+      "updatedAt": "Date"
+    }
+  ]
+}
+
+4.5.2. ÜRÜN FİYATI EKLE
+-----------------------
+POST /category-product/products/:id/prices
+Açıklama: Ürün fiyatı ekler
+Authentication: Gerekli
+Permission: "fiyat oluşturma"
+
+Request Body:
+{
+  "salesMethod": "string (zorunlu, ObjectId)",
+  "amount": "number (zorunlu)",
+  "unit": "string (zorunlu, ObjectId)"
+}
+
+Response:
+{
+  "message": "Product price created successfully",
+  "price": {
+    "_id": "ObjectId",
+    "product": "ObjectId",
+    "salesMethod": "ObjectId",
+    "amount": "number",
+    "unit": "ObjectId",
+    "createdAt": "Date",
+    "updatedAt": "Date"
+  }
+}
+
+4.5.3. FİYAT DETAYI
+-------------------
+GET /category-product/prices/:id
+Açıklama: Fiyat detayını getirir
+Authentication: Gerekli
+Permission: "fiyat listeleme"
+
+Request Body: Yok
+
+Response:
+{
+  "message": "Price retrieved successfully",
+  "price": {
+    "_id": "ObjectId",
+    "product": {
+      "_id": "ObjectId",
+      "name": "string"
+    },
+    "salesMethod": {
+      "_id": "ObjectId",
+      "name": "string"
+    },
+    "amount": "number",
+    "unit": {
+      "_id": "ObjectId",
+      "name": "string"
+    },
+    "createdAt": "Date",
+    "updatedAt": "Date"
+  }
+}
+
+4.5.4. FİYAT GÜNCELLEME
+-----------------------
+PUT /category-product/prices/:id
+Açıklama: Fiyat bilgilerini günceller
+Authentication: Gerekli
+Permission: "fiyat güncelleme"
+
+Request Body:
+{
+  "salesMethod": "string (opsiyonel, ObjectId)",
+  "amount": "number (opsiyonel)",
+  "unit": "string (opsiyonel, ObjectId)"
+}
+
+Response:
+{
+  "message": "Price updated successfully",
+  "price": {
+    "_id": "ObjectId",
+    "salesMethod": "ObjectId",
+    "amount": "number",
+    "unit": "ObjectId"
+  }
+}
+
+4.5.5. FİYAT SİLME
+------------------
+DELETE /category-product/prices/:id
+Açıklama: Fiyatı siler
+Authentication: Gerekli
+Permission: "fiyat silme"
+
+Request Body: Yok
+
+Response:
+{
+  "message": "Price deleted successfully"
+}
+
+4.6. BRANCH SALES METHOD YÖNETİMİ
+---------------------------------
+
+4.6.1. ŞUBE SATIŞ YÖNTEMLERİNİ LİSTELE
+-------------------------------------
+GET /category-product/branches/:id/sales-methods
+Açıklama: Şube satış yöntemlerini listeler
+Authentication: Gerekli
+Permission: "satış yöntemi atama"
+
+Request Body: Yok
+
+Response:
+{
+  "message": "Branch sales methods retrieved successfully",
+  "salesMethods": [
+    {
+      "_id": "ObjectId",
+      "branch": "ObjectId",
+      "salesMethod": {
+        "_id": "ObjectId",
+        "name": "string",
+        "description": "string"
+      },
+      "isActive": "boolean",
+      "createdAt": "Date",
+      "updatedAt": "Date"
+    }
+  ]
+}
+
+4.6.2. ŞUBEYE SATIŞ YÖNTEMİ ATA
+-------------------------------
+POST /category-product/branches/:id/sales-methods
+Açıklama: Şubeye satış yöntemi atar
+Authentication: Gerekli
+Permission: "satış yöntemi atama"
+
+Request Body:
+{
+  "salesMethod": "string (zorunlu, ObjectId)"
+}
+
+Response:
+{
+  "message": "Sales method assigned to branch successfully",
+  "assignment": {
+    "_id": "ObjectId",
+    "branch": "ObjectId",
+    "salesMethod": "ObjectId",
+    "isActive": "boolean",
+    "createdAt": "Date",
+    "updatedAt": "Date"
+  }
+}
+
+4.6.3. ŞUBEDEN SATIŞ YÖNTEMİ KALDIR
+-----------------------------------
+DELETE /category-product/branches/:id/sales-methods/:salesMethodId
+Açıklama: Şubeden satış yöntemi kaldırır
+Authentication: Gerekli
+Permission: "satış yöntemi kaldırma"
+
+Request Body: Yok
+
+Response:
+{
+  "message": "Sales method removed from branch successfully"
+}
+
+4.7. UTILITY ROUTES
+-------------------
+
+4.7.1. MİKTAR BİRİMLERİNİ LİSTELE
+--------------------------------
+GET /category-product/amount-units
+Açıklama: Miktar birimlerini listeler
+Authentication: Gerekli
+Permission: "malzeme listeleme"
+
+Request Body: Yok
+
+Response:
+{
+  "message": "Amount units retrieved successfully",
+  "units": [
+    {
+      "_id": "ObjectId",
+      "name": "string",
+      "createdAt": "Date",
+      "updatedAt": "Date"
+    }
+  ]
+}
+
+4.7.2. PARA BİRİMLERİNİ LİSTELE
+------------------------------
+GET /category-product/currency-units
+Açıklama: Para birimlerini listeler
+Authentication: Gerekli
+Permission: "fiyat listeleme"
+
+Request Body: Yok
+
+Response:
+{
+  "message": "Currency units retrieved successfully",
+  "units": [
+    {
+      "_id": "ObjectId",
+      "name": "string",
+      "createdAt": "Date",
+      "updatedAt": "Date"
+    }
+  ]
+}
+
+4.7.3. SATIŞ YÖNTEMLERİNİ LİSTELE
+--------------------------------
+GET /category-product/sales-methods
+Açıklama: Satış yöntemlerini listeler
+Authentication: Gerekli
+Permission: "satış yöntemi atama"
+
+Request Body: Yok
+
+Response:
+{
+  "message": "Sales methods retrieved successfully",
+  "methods": [
+    {
+      "_id": "ObjectId",
+      "name": "string",
+      "description": "string",
+      "createdAt": "Date",
+      "updatedAt": "Date"
+    }
+  ]
+}
+
+================================================================================
+                                HATA KODLARI
+================================================================================
+
+400 - Bad Request: Geçersiz request body veya parametreler
+401 - Unauthorized: Authentication gerekli
+403 - Forbidden: Yeterli izin yok
+404 - Not Found: Kaynak bulunamadı
+500 - Internal Server Error: Sunucu hatası
+
+================================================================================
+                                ÖRNEK KULLANIM
+================================================================================
+
+1. KULLANICI GİRİŞİ:
+POST http://localhost:3000/auth/login
+Content-Type: application/json
+
+{
+  "email": "aslanalper2516@gmail.com",
+  "password": "240911Mf.."
+}
+
+2. ŞİRKET OLUŞTURMA:
+POST http://localhost:3000/companies-branches/companies
+Content-Type: application/json
+Cookie: session_token=your_session_token
+
+{
+  "name": "WMB Yazılım",
+  "email": "wmbyazilim@wmb.net",
+  "address": "Kağıthane/İstanbul",
+  "phone": "+90 537 797 9125"
+}
+
+3. KATEGORİ OLUŞTURMA:
+POST http://localhost:3000/category-product/categories
+Content-Type: application/json
+Cookie: session_token=your_session_token
+
+{
+  "name": "İçecekler",
+  "company": "company_id_here",
+  "branch": "branch_id_here"
+}
+
+4. ÜRÜN OLUŞTURMA:
+POST http://localhost:3000/category-product/products
+Content-Type: application/json
+Cookie: session_token=your_session_token
+
+{
+  "name": "Kahve",
+  "category": "category_id_here",
+  "kitchen": "kitchen_id_here",
+  "defaultSalesMethod": "sales_method_id_here"
+}
+
+================================================================================
+                                SON NOTLAR
+================================================================================
+
+- Tüm endpoint'ler authentication gerektirir
+- Her endpoint için gerekli permission'lar belirtilmiştir
+- Request body'lerde zorunlu alanlar açıkça belirtilmiştir
+- Response formatları tutarlıdır
+- Soft delete kullanılan yerler belirtilmiştir
+- Hierarchical yapılar (kategoriler) desteklenmektedir
+- Cascade delete işlemleri güvenli şekilde yapılmaktadır
+
+Bu dokümantasyon, API'nin tüm özelliklerini kapsamlı şekilde açıklamaktadır.
+Frontend geliştiricileri bu dokümantasyonu kullanarak API ile etkileşim 
+kurabilirler.
+
+================================================================================

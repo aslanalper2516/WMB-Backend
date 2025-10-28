@@ -1,0 +1,228 @@
+import mongoose from "mongoose";
+import dotenv from "dotenv";
+import * as bcrypt from "bcryptjs";
+import { User } from "../services/AuthService/models/user";
+import { Role } from "../services/RolePermissionService/models/role";
+import { Permission } from "../services/RolePermissionService/models/permission";
+import { RolePermission } from "../services/RolePermissionService/models/rolePermission";
+import { Company } from "../services/CompanyBranchService/models/company";
+import { Branch } from "../services/CompanyBranchService/models/branch";
+
+dotenv.config();
+
+// ENV'de tanımlı değilse default olarak local MongoDB kullan
+const MONGO_URI = process.env.MONGO_URI || "mongodb://127.0.0.1:27017/wmb-tracker";
+
+async function seedDatabase() {
+  try {
+    console.log("🚀 Connecting to MongoDB...");
+    await mongoose.connect(MONGO_URI);
+    console.log("✅ MongoDB connection established.");
+
+    // 1️⃣ Permissions oluştur
+    console.log("📝 Creating permissions...");
+    const permissions = [
+      // Company Branch Permissions
+      "şirket listeleme",
+      "şirket oluşturma", 
+      "şirket görüntüleme",
+      "şirket güncelleme",
+      "şirket silme",
+      "şube listeleme",
+      "şube oluşturma",
+      "şube görüntüleme", 
+      "şube güncelleme",
+      "şube masa sayısı güncelleme",
+      "şube silme",
+      
+      // Role Permission Permissions
+      "izin oluşturma",
+      "izin listeleme",
+      "izin güncelleme",
+      "izin silme",
+      "rol oluşturma",
+      "rol listeleme",
+      "rol güncelleme",
+      "rol silme",
+      "role izin atama",
+      "role izin kaldırma",
+      "role izin listeleme",
+      
+      // Category Product Permissions
+      "kategori oluşturma",
+      "kategori listeleme",
+      "kategori görüntüleme",
+      "kategori güncelleme",
+      "kategori silme",
+      "kategori taşıma",
+      "ürün oluşturma",
+      "ürün listeleme",
+      "ürün görüntüleme",
+      "ürün güncelleme",
+      "ürün silme",
+      "ürün kategori değiştirme",
+      "mutfak oluşturma",
+      "mutfak listeleme",
+      "mutfak güncelleme",
+      "mutfak silme",
+      "malzeme oluşturma",
+      "malzeme listeleme",
+      "malzeme güncelleme",
+      "malzeme silme",
+      "fiyat oluşturma",
+      "fiyat listeleme",
+      "fiyat güncelleme",
+      "fiyat silme",
+      "satış yöntemi atama",
+      "satış yöntemi kaldırma",
+      "satış yöntemi oluşturma",
+      "satış yöntemi güncelleme",
+      "satış yöntemi silme",
+      
+      // Menu Permissions
+      "menü oluşturma",
+      "menü listeleme",
+      "menü görüntüleme",
+      "menü güncelleme",
+      "menü silme",
+      "menü kategori ekleme",
+      "menü kategori kaldırma",
+      "menü kategori listeleme",
+      "menü kategori güncelleme",
+      "menü şubeye atama",
+      "menü şubeden kaldırma",
+      "menü şube listeleme",
+      "menü şube atama",
+      "menü ürün ekleme",
+      "ürün mutfak atama",
+      
+      // User Management Permissions
+      "kullanıcı listeleme",
+      "kullanıcı görüntüleme",
+      "yeni kullanıcı oluşturma",
+      "kullanıcı güncelleme",
+      "kullanıcı silme"
+    ];
+
+    const createdPermissions = [];
+    for (const permName of permissions) {
+      const permission = await Permission.findOneAndUpdate(
+        { name: permName },
+        { name: permName, description: `${permName} izni` },
+        { upsert: true, new: true }
+      );
+      createdPermissions.push(permission);
+    }
+    console.log(`✅ ${createdPermissions.length} permissions created.`);
+
+    // 2️⃣ Super Admin rolü oluştur
+    console.log("👑 Creating super-admin role...");
+    const superAdminRole = await Role.findOneAndUpdate(
+      { name: "super-admin" },
+      { 
+        name: "super-admin",
+        scope: "GLOBAL",
+        branch: null,
+        permissions: createdPermissions.map(p => p._id)
+      },
+      { upsert: true, new: true }
+    );
+    console.log("✅ Super-admin role created.");
+
+    // 3️⃣ User oluştur
+    console.log("👤 Creating user...");
+    const hashedPassword = await bcrypt.hash("240911Mf..", 12);
+    const user = await User.findOneAndUpdate(
+      { email: "aslanalper2516@gmail.com" },
+      {
+        name: "Alper Aslan",
+        email: "aslanalper2516@gmail.com",
+        password: hashedPassword,
+        role: superAdminRole._id,
+        branch: null // Super admin global olduğu için branch yok
+      },
+      { upsert: true, new: true }
+    );
+    console.log("✅ User created.");
+
+    // 4️⃣ Company oluştur
+    console.log("🏢 Creating company...");
+    const company = await Company.findOneAndUpdate(
+      { name: "WMB Yazılım" },
+      {
+        name: "WMB Yazılım",
+        email: "wmbyazilim@wmb.net",
+        phone: "+90 537 797 9125",
+        province: "İstanbul",
+        district: "Kağıthane",
+        neighborhood: "Merkez Mahallesi",
+        street: "Teknoloji Caddesi",
+        address: "Kağıthane/İstanbul",
+        manager: user._id,
+        managerEmail: "alper@wmb.net",
+        managerPhone: "+90 537 797 9125"
+      },
+      { upsert: true, new: true }
+    );
+    console.log("✅ Company created.");
+
+    // 5️⃣ Branch oluştur
+    console.log("🏪 Creating branch...");
+    const branch = await Branch.findOneAndUpdate(
+      { name: "Kağıthane Şubesi" },
+      {
+        name: "Kağıthane Şubesi",
+        email: "kagithane@wmb.net",
+        phone: "+90 537 797 9125",
+        province: "İstanbul",
+        district: "Kağıthane",
+        neighborhood: "Merkez Mahallesi",
+        street: "Teknoloji Caddesi",
+        address: "Kağıthane/İstanbul",
+        company: company._id,
+        manager: user._id,
+        managerEmail: "kagithane-manager@wmb.net",
+        managerPhone: "+90 537 797 9126",
+        tables: 0
+      },
+      { upsert: true, new: true }
+    );
+    console.log("✅ Branch created.");
+
+    // 6️⃣ RolePermission ilişkilerini oluştur
+    console.log("🔗 Creating role-permission relationships...");
+    for (const permission of createdPermissions) {
+      await RolePermission.findOneAndUpdate(
+        {
+          role: superAdminRole._id,
+          permission: permission._id,
+          branch: null // Super admin global olduğu için branch yok
+        },
+        {
+          role: superAdminRole._id,
+          permission: permission._id,
+          branch: null,
+          createdBy: user._id
+        },
+        { upsert: true, new: true }
+      );
+    }
+    console.log("✅ Role-permission relationships created.");
+
+    console.log("\n🎉 Database seeding completed successfully!");
+    console.log("📊 Summary:");
+    console.log(`   - ${createdPermissions.length} permissions created`);
+    console.log(`   - 1 super-admin role created`);
+    console.log(`   - 1 company created (WMB Yazılım)`);
+    console.log(`   - 1 user created (Alper Aslan)`);
+    console.log(`   - 1 branch created (Kağıthane Şubesi)`);
+    console.log(`   - ${createdPermissions.length} role-permission relationships created`);
+    
+    process.exit(0);
+  } catch (err) {
+    console.error("❌ Seed çalıştırılırken hata:", err);
+    process.exit(1);
+  }
+}
+
+seedDatabase();
