@@ -766,6 +766,7 @@ categoryProductRoutes.post(
     const schema = z.object({
       name: z.string().min(1),
       description: z.string().optional(),
+      parent: z.string().optional(),
     });
     const input = schema.parse(body);
 
@@ -789,6 +790,7 @@ categoryProductRoutes.put(
     const schema = z.object({
       name: z.string().optional(),
       description: z.string().optional(),
+      parent: z.string().optional(),
     });
     const input = schema.parse(body);
 
@@ -810,6 +812,40 @@ categoryProductRoutes.delete(
     const { id } = c.req.param();
     await CategoryProductService.deleteSalesMethod(id);
     return c.json({ message: "Sales method deleted successfully" });
+  }
+);
+
+/**
+ * 📍 GET /sales-methods/hierarchy
+ * Satış yöntemlerini hiyerarşik yapıda listeler.
+ * Sadece "satış yöntemi atama" iznine sahip kullanıcılar erişebilir.
+ */
+categoryProductRoutes.get(
+  "/sales-methods/hierarchy",
+  authMiddleware,
+  permissionMiddleware("satış yöntemi atama"),
+  async (c) => {
+    const hierarchy = await CategoryProductService.getSalesMethodsHierarchy();
+    return c.json({ message: "Sales methods hierarchy retrieved successfully", hierarchy });
+  }
+);
+
+/**
+ * 📍 GET /sales-methods/:id
+ * Belirli bir satış yöntemini detaylarıyla getirir.
+ * Sadece "satış yöntemi atama" iznine sahip kullanıcılar erişebilir.
+ */
+categoryProductRoutes.get(
+  "/sales-methods/:id",
+  authMiddleware,
+  permissionMiddleware("satış yöntemi atama"),
+  async (c) => {
+    const { id } = c.req.param();
+    const method = await CategoryProductService.getSalesMethodById(id);
+    if (!method) {
+      return c.json({ message: "Sales method not found" }, 404);
+    }
+    return c.json({ message: "Sales method retrieved successfully", method });
   }
 );
 

@@ -350,18 +350,45 @@ export const CategoryProductService = {
   },
 
   async getSalesMethods() {
-    return await SalesMethod.find().sort({ name: 1 });
+    return await SalesMethod.find().populate('parent', 'name').sort({ name: 1 });
   },
 
-  async createSalesMethod(data: { name: string; description?: string }) {
+  async getSalesMethodsHierarchy() {
+    // Ana kategorileri (parent: null) getir
+    const rootMethods = await SalesMethod.find({ parent: null }).populate('parent', 'name').sort({ name: 1 });
+    
+    // Her ana kategori için alt kategorileri getir
+    const hierarchy = await Promise.all(
+      rootMethods.map(async (rootMethod) => {
+        const children = await SalesMethod.find({ parent: rootMethod._id }).populate('parent', 'name').sort({ name: 1 });
+        return {
+          ...rootMethod.toObject(),
+          children
+        };
+      })
+    );
+    
+    return hierarchy;
+  },
+
+  async createSalesMethod(data: { name: string; description?: string; parent?: string }) {
     return await SalesMethod.create(data);
   },
 
-  async updateSalesMethod(id: string, data: { name?: string; description?: string }) {
-    return await SalesMethod.findByIdAndUpdate(id, data, { new: true });
+  async updateSalesMethod(id: string, data: { name?: string; description?: string; parent?: string }) {
+    return await SalesMethod.findByIdAndUpdate(id, data, { new: true }).populate('parent', 'name');
   },
 
   async deleteSalesMethod(id: string) {
+    // Önce alt kategorileri kontrol et
+    const children = await SalesMethod.find({ parent: id });
+    if (children.length > 0) {
+      throw new Error('Bu satış yönteminin alt kategorileri bulunmaktadır. Önce alt kategorileri siliniz.');
+    }
     return await SalesMethod.findByIdAndDelete(id);
+  },
+
+  async getSalesMethodById(id: string) {
+    return await SalesMethod.findById(id).populate('parent', 'name');
   }
 };

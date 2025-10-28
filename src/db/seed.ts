@@ -7,6 +7,7 @@ import { Permission } from "../services/RolePermissionService/models/permission"
 import { RolePermission } from "../services/RolePermissionService/models/rolePermission";
 import { Company } from "../services/CompanyBranchService/models/company";
 import { Branch } from "../services/CompanyBranchService/models/branch";
+import { SalesMethod } from "../services/CategoryProductService/models/salesMethod";
 
 dotenv.config();
 
@@ -209,6 +210,113 @@ async function seedDatabase() {
     }
     console.log("✅ Role-permission relationships created.");
 
+    // 7️⃣ Sales Methods oluştur
+    console.log("🛒 Creating sales methods...");
+    
+    // Ana kategorileri oluştur
+    const internetSales = await SalesMethod.findOneAndUpdate(
+      { name: "İnternet Satışları" },
+      {
+        name: "İnternet Satışları",
+        description: "Online platformlar üzerinden yapılan satışlar",
+        parent: null
+      },
+      { upsert: true, new: true }
+    );
+
+    const restaurantSales = await SalesMethod.findOneAndUpdate(
+      { name: "Restoranda Satış" },
+      {
+        name: "Restoranda Satış",
+        description: "Restoran içinde yapılan satışlar",
+        parent: null
+      },
+      { upsert: true, new: true }
+    );
+
+    const takeawaySales = await SalesMethod.findOneAndUpdate(
+      { name: "Gel-Al Satışları" },
+      {
+        name: "Gel-Al Satışları",
+        description: "Müşterinin gelip aldığı satışlar",
+        parent: null
+      },
+      { upsert: true, new: true }
+    );
+
+    // Alt kategorileri oluştur
+    await SalesMethod.findOneAndUpdate(
+      { name: "Trendyol" },
+      {
+        name: "Trendyol",
+        description: "Trendyol platformu üzerinden satış",
+        parent: internetSales._id
+      },
+      { upsert: true, new: true }
+    );
+
+    await SalesMethod.findOneAndUpdate(
+      { name: "Yemeksepeti" },
+      {
+        name: "Yemeksepeti",
+        description: "Yemeksepeti platformu üzerinden satış",
+        parent: internetSales._id
+      },
+      { upsert: true, new: true }
+    );
+
+    await SalesMethod.findOneAndUpdate(
+      { name: "Getir" },
+      {
+        name: "Getir",
+        description: "Getir platformu üzerinden satış",
+        parent: internetSales._id
+      },
+      { upsert: true, new: true }
+    );
+
+    await SalesMethod.findOneAndUpdate(
+      { name: "Masada Yeme" },
+      {
+        name: "Masada Yeme",
+        description: "Restoran masasında yeme",
+        parent: restaurantSales._id
+      },
+      { upsert: true, new: true }
+    );
+
+    await SalesMethod.findOneAndUpdate(
+      { name: "Bar Siparişi" },
+      {
+        name: "Bar Siparişi",
+        description: "Bar bölümünden sipariş",
+        parent: restaurantSales._id
+      },
+      { upsert: true, new: true }
+    );
+
+    await SalesMethod.findOneAndUpdate(
+      { name: "Paket Servis" },
+      {
+        name: "Paket Servis",
+        description: "Paket halinde servis",
+        parent: takeawaySales._id
+      },
+      { upsert: true, new: true }
+    );
+
+    await SalesMethod.findOneAndUpdate(
+      { name: "Drive Thru" },
+      {
+        name: "Drive Thru",
+        description: "Arabadan sipariş alma",
+        parent: takeawaySales._id
+      },
+      { upsert: true, new: true }
+    );
+
+    console.log("✅ Sales methods created.");
+
     console.log("\n🎉 Database seeding completed successfully!");
     console.log("📊 Summary:");
     console.log(`   - ${createdPermissions.length} permissions created`);
@@ -217,6 +325,7 @@ async function seedDatabase() {
     console.log(`   - 1 user created (Alper Aslan)`);
     console.log(`   - 1 branch created (Kağıthane Şubesi)`);
     console.log(`   - ${createdPermissions.length} role-permission relationships created`);
+    console.log(`   - 3 main sales methods and 6 sub-sales methods created`);
     
     process.exit(0);
   } catch (err) {
