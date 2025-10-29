@@ -26,7 +26,7 @@ export const CategoryProductService = {
   },
 
   async getCategories() {
-    return await Category.find({ isActive: true })
+    return await Category.find()
       .sort({ name: 1 });
   },
 
@@ -75,7 +75,7 @@ export const CategoryProductService = {
   },
 
   async getProducts() {
-    return await Product.find({ isActive: true })
+    return await Product.find()
       .populate("defaultSalesMethod")
       .sort({ name: 1 });
   },
