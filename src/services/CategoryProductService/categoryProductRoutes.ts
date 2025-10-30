@@ -20,7 +20,8 @@ categoryProductRoutes.get(
   authMiddleware,
   permissionMiddleware("kategori listeleme"),
   async (c) => {
-    const categories = await CategoryProductService.getCategories();
+    const companyId = c.req.query("company");
+    const categories = await CategoryProductService.getCategories(companyId || undefined);
     return c.json({ message: "Categories retrieved successfully", categories });
   }
 );
@@ -39,6 +40,7 @@ categoryProductRoutes.post(
     const schema = z.object({
       name: z.string().min(1),
       description: z.string().optional(),
+      company: z.string(),
     });
     const input = schema.parse(body);
 
@@ -79,6 +81,7 @@ categoryProductRoutes.put(
       name: z.string().optional(),
       description: z.string().optional(),
       isActive: z.boolean().optional(),
+      company: z.string().optional(),
     });
     const input = schema.parse(body);
 

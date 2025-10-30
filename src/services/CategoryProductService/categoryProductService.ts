@@ -20,38 +20,48 @@ export const CategoryProductService = {
   async createCategory(data: { 
     name: string; 
     description?: string;
+    company: string;
   }) {
-    // Boş string'leri undefined yap
     const cleanData: any = {
       name: data.name,
-      description: data.description
+      company: data.company
     };
-    
+    if (data.description && data.description.trim() !== '') {
+      cleanData.description = data.description;
+    }
     return await Category.create(cleanData);
   },
 
-  async getCategories() {
-    return await Category.find()
+  async getCategories(companyId?: string) {
+    const query: any = {};
+    if (companyId) query.company = companyId;
+    return await Category.find(query)
+      .populate('company')
       .sort({ name: 1 });
   },
 
   async getCategoryById(id: string) {
-    return await Category.findById(id);
+    return await Category.findById(id).populate('company');
   },
 
   async updateCategory(id: string, data: { 
     name?: string; 
     description?: string;
     isActive?: boolean;
+    company?: string;
   }) {
-    // Boş string'leri undefined yap
     const cleanData: any = {};
-    
     if (data.name !== undefined) cleanData.name = data.name;
-    if (data.description !== undefined) cleanData.description = data.description;
     if (data.isActive !== undefined) cleanData.isActive = data.isActive;
-    
-    return await Category.findByIdAndUpdate(id, cleanData, { new: true });
+    if (data.company !== undefined) cleanData.company = data.company;
+    if (data.description !== undefined) {
+      if (data.description && data.description.trim() !== '') {
+        cleanData.description = data.description;
+      } else {
+        cleanData.description = undefined;
+      }
+    }
+    return await Category.findByIdAndUpdate(id, cleanData, { new: true }).populate('company');
   },
 
   async deleteCategory(id: string) {
@@ -687,12 +697,18 @@ export const CategoryProductService = {
    *  MENU UTILITIES
    * -------------------------*/
   async getAvailableCategories(menuId: string) {
+    // Menü şirketi ile aynı şirkette olup menüde kullanılmamış kategorileri döndür
+    const menu = await Menu.findById(menuId).select('company');
     const menuCategories = await MenuCategory.find({ menu: menuId }).select("category");
     const usedCategoryIds = menuCategories.map(mc => mc.category);
-    return await Category.find({ 
+    const query: any = {
       _id: { $nin: usedCategoryIds },
-      isActive: true 
-    }).sort({ name: 1 });
+      isActive: true
+    };
+    if (menu?.company) {
+      query.company = menu.company;
+    }
+    return await Category.find(query).sort({ name: 1 });
   },
 
   async getAvailableProducts(menuId: string, categoryId: string) {
