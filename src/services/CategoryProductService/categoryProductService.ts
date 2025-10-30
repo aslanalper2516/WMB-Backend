@@ -164,7 +164,7 @@ export const CategoryProductService = {
   },
 
   async getKitchens(branchId?: string, companyId?: string) {
-    const query: any = { isActive: true };
+    const query: any = {};
     if (branchId) query.branch = branchId;
     if (companyId) query.company = companyId;
     
