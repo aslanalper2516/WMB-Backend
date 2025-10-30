@@ -117,7 +117,8 @@ categoryProductRoutes.get(
   authMiddleware,
   permissionMiddleware("ürün listeleme"),
   async (c) => {
-    const products = await CategoryProductService.getProducts();
+    const companyId = c.req.query("company");
+    const products = await CategoryProductService.getProducts(companyId || undefined);
     return c.json({ message: "Products retrieved successfully", products });
   }
 );
@@ -137,6 +138,7 @@ categoryProductRoutes.post(
       name: z.string().min(1),
       description: z.string().optional(),
       defaultSalesMethod: z.string(),
+      company: z.string(),
     });
     const input = schema.parse(body);
 
@@ -178,6 +180,7 @@ categoryProductRoutes.put(
       description: z.string().optional(),
       defaultSalesMethod: z.string().optional(),
       isActive: z.boolean().optional(),
+      company: z.string().optional(),
     });
     const input = schema.parse(body);
 

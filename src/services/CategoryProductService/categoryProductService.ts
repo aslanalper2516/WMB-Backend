@@ -60,11 +60,13 @@ export const CategoryProductService = {
     name: string; 
     description?: string;
     defaultSalesMethod: string;
+    company: string;
   }) {
     // Boş string'leri kontrol et
     const cleanData: any = {
       name: data.name,
-      defaultSalesMethod: data.defaultSalesMethod
+      defaultSalesMethod: data.defaultSalesMethod,
+      company: data.company
     };
     
     if (data.description && data.description.trim() !== '') {
@@ -74,15 +76,19 @@ export const CategoryProductService = {
     return await Product.create(cleanData);
   },
 
-  async getProducts() {
-    return await Product.find()
+  async getProducts(companyId?: string) {
+    const query: any = {};
+    if (companyId) query.company = companyId;
+    return await Product.find(query)
       .populate("defaultSalesMethod")
+      .populate("company")
       .sort({ name: 1 });
   },
 
   async getProductById(id: string) {
     return await Product.findById(id)
-      .populate("defaultSalesMethod");
+      .populate("defaultSalesMethod")
+      .populate("company");
   },
 
   async updateProduct(id: string, data: { 
@@ -90,6 +96,7 @@ export const CategoryProductService = {
     description?: string;
     defaultSalesMethod?: string;
     isActive?: boolean; 
+    company?: string;
   }) {
     // Boş string'leri kontrol et
     const cleanData: any = {};
@@ -97,6 +104,7 @@ export const CategoryProductService = {
     if (data.name !== undefined) cleanData.name = data.name;
     if (data.isActive !== undefined) cleanData.isActive = data.isActive;
     if (data.defaultSalesMethod !== undefined) cleanData.defaultSalesMethod = data.defaultSalesMethod;
+    if (data.company !== undefined) cleanData.company = data.company;
     
     if (data.description !== undefined) {
       if (data.description && data.description.trim() !== '') {
@@ -107,7 +115,8 @@ export const CategoryProductService = {
     }
     
     return await Product.findByIdAndUpdate(id, cleanData, { new: true })
-      .populate("defaultSalesMethod");
+      .populate("defaultSalesMethod")
+      .populate("company");
   },
 
   async toggleProductActive(id: string) {
@@ -115,7 +124,8 @@ export const CategoryProductService = {
     if (!product) throw new Error("Product not found");
     
     return await Product.findByIdAndUpdate(id, { isActive: !product.isActive }, { new: true })
-      .populate("defaultSalesMethod");
+      .populate("defaultSalesMethod")
+      .populate("company");
   },
 
   async deleteProduct(id: string) {
