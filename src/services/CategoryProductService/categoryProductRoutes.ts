@@ -445,7 +445,8 @@ categoryProductRoutes.get(
   permissionMiddleware("fiyat listeleme"),
   async (c) => {
     const { id } = c.req.param();
-    const prices = await CategoryProductService.getProductPrices(id);
+    const branchId = c.req.query("branch");
+    const prices = await CategoryProductService.getProductPrices(id, branchId || undefined);
     return c.json({ message: "Product prices retrieved successfully", prices });
   }
 );
@@ -466,7 +467,7 @@ categoryProductRoutes.post(
           salesMethod: z.string(),
           price: z.number(),
           currencyUnit: z.string(),
-          branch: z.string().optional(),
+          branch: z.string(),
           company: z.string().optional(),
         });
     const input = schema.parse(body);
@@ -509,6 +510,7 @@ categoryProductRoutes.put(
       salesMethod: z.string().optional(),
       price: z.number().optional(),
       currencyUnit: z.string().optional(),
+      branch: z.string().optional(),
     });
     const input = schema.parse(body);
 

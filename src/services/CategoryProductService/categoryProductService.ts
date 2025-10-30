@@ -254,20 +254,29 @@ export const CategoryProductService = {
     salesMethod: string; 
     price: number; 
     currencyUnit: string;
-    branch?: string;
+    branch: string;
     company?: string;
   }) {
+    // Aynı ürün + satış yöntemi + şube kombinasyonu kontrolü
+    const existing = await ProductPrice.findOne({
+      product: data.product,
+      salesMethod: data.salesMethod,
+      branch: data.branch
+    });
+    
+    if (existing) {
+      throw new Error("Bu ürün için bu satış yöntemi ve şube kombinasyonunda zaten bir fiyat tanımlı");
+    }
+    
     // Boş string'leri undefined yap
     const cleanData: any = {
       product: data.product,
       salesMethod: data.salesMethod,
       price: data.price,
-      currencyUnit: data.currencyUnit
+      currencyUnit: data.currencyUnit,
+      branch: data.branch
     };
     
-    if (data.branch && data.branch.trim() !== '') {
-      cleanData.branch = data.branch;
-    }
     if (data.company && data.company.trim() !== '') {
       cleanData.company = data.company;
     }
@@ -275,8 +284,15 @@ export const CategoryProductService = {
     return await ProductPrice.create(cleanData);
   },
 
-  async getProductPrices(productId: string) {
-    return await ProductPrice.find({ product: productId })
+  async getProductPrices(productId: string, branchId?: string) {
+    const query: any = { product: productId };
+    
+    // Eğer branch belirtilmişse, o şubeye özel fiyatları getir
+    if (branchId) {
+      query.branch = branchId;
+    }
+    
+    return await ProductPrice.find(query)
       .populate("salesMethod")
       .populate("currencyUnit")
       .populate("branch")
@@ -296,17 +312,23 @@ export const CategoryProductService = {
   async updatePrice(id: string, data: { 
     salesMethod?: string; 
     price?: number; 
-    currencyUnit?: string; 
+    currencyUnit?: string;
+    branch?: string;
   }) {
     const update: any = {};
     if (data.salesMethod) update.salesMethod = data.salesMethod;
     if (typeof data.price === 'number') update.price = data.price;
     if (data.currencyUnit) update.currencyUnit = data.currencyUnit;
+    if (data.branch !== undefined && data.branch.trim() !== '') {
+      update.branch = data.branch;
+    }
 
     return await ProductPrice.findByIdAndUpdate(id, update, { new: true })
       .populate("product")
       .populate("salesMethod")
-      .populate("currencyUnit");
+      .populate("currencyUnit")
+      .populate("branch")
+      .populate("company");
   },
 
   async deletePrice(id: string) {
