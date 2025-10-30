@@ -164,7 +164,7 @@ export const CategoryProductService = {
   },
 
   async getKitchens(branchId?: string, companyId?: string) {
-    const query: any = {};
+    const query: any = { isActive: true };
     if (branchId) query.branch = branchId;
     if (companyId) query.company = companyId;
     
@@ -180,8 +180,11 @@ export const CategoryProductService = {
       .populate("branch");
   },
 
-  async updateKitchen(id: string, data: { name?: string }) {
-    return await Kitchen.findByIdAndUpdate(id, data, { new: true })
+  async updateKitchen(id: string, data: { name?: string; isActive?: boolean }) {
+    const update: any = {};
+    if (data.name !== undefined) update.name = data.name;
+    if (data.isActive !== undefined) update.isActive = data.isActive;
+    return await Kitchen.findByIdAndUpdate(id, update, { new: true })
       .populate("company")
       .populate("branch");
   },

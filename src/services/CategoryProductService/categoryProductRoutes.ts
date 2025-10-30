@@ -298,6 +298,7 @@ categoryProductRoutes.put(
     const body = await c.req.json();
     const schema = z.object({
       name: z.string().optional(),
+      isActive: z.boolean().optional(),
     });
     const input = schema.parse(body);
 
