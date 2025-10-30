@@ -852,4 +852,364 @@ categoryProductRoutes.get(
   }
 );
 
+/* ============================================================
+ *  MENU ROUTES (MERGED)
+ * ============================================================*/
+
+// Menüler
+categoryProductRoutes.get(
+  "/menus",
+  authMiddleware,
+  permissionMiddleware("kategori listeleme"),
+  async (c) => {
+    const companyId = c.req.query("company");
+    const menus = await CategoryProductService.getMenus(companyId || undefined);
+    return c.json({ message: "Menus retrieved successfully", menus });
+  }
+);
+
+categoryProductRoutes.post(
+  "/menus",
+  authMiddleware,
+  permissionMiddleware("kategori oluşturma"),
+  async (c) => {
+    const body = await c.req.json();
+    const schema = z.object({
+      name: z.string().min(1),
+      description: z.string().optional(),
+      company: z.string(),
+    });
+    const input = schema.parse(body);
+    const menu = await CategoryProductService.createMenu(input);
+    return c.json({ message: "Menu created successfully", menu });
+  }
+);
+
+categoryProductRoutes.get(
+  "/menus/:id",
+  authMiddleware,
+  permissionMiddleware("kategori görüntüleme"),
+  async (c) => {
+    const { id } = c.req.param();
+    const menu = await CategoryProductService.getMenuById(id);
+    return c.json({ message: "Menu retrieved successfully", menu });
+  }
+);
+
+categoryProductRoutes.put(
+  "/menus/:id",
+  authMiddleware,
+  permissionMiddleware("kategori güncelleme"),
+  async (c) => {
+    const { id } = c.req.param();
+    const body = await c.req.json();
+    const schema = z.object({
+      name: z.string().optional(),
+      description: z.string().optional(),
+      isActive: z.boolean().optional(),
+    });
+    const input = schema.parse(body);
+    const menu = await CategoryProductService.updateMenu(id, input);
+    return c.json({ message: "Menu updated successfully", menu });
+  }
+);
+
+categoryProductRoutes.delete(
+  "/menus/:id",
+  authMiddleware,
+  permissionMiddleware("kategori silme"),
+  async (c) => {
+    const { id } = c.req.param();
+    await CategoryProductService.deleteMenu(id);
+    return c.json({ message: "Menu deleted successfully" });
+  }
+);
+
+categoryProductRoutes.get(
+  "/menus/:id/structure",
+  authMiddleware,
+  permissionMiddleware("menü görüntüleme"),
+  async (c) => {
+    const { id } = c.req.param();
+    const structure = await CategoryProductService.getMenuStructure(id);
+    return c.json({ message: "Menu structure retrieved successfully", structure });
+  }
+);
+
+// Menü - Şube
+categoryProductRoutes.post(
+  "/menus/:id/branches",
+  authMiddleware,
+  permissionMiddleware("menü şube atama"),
+  async (c) => {
+    const { id } = c.req.param();
+    const body = await c.req.json();
+    const schema = z.object({
+      branch: z.string(),
+    });
+    const input = schema.parse(body);
+    const assignment = await CategoryProductService.assignMenuToBranch({ ...input, menu: id });
+    return c.json({ message: "Menu assigned to branch successfully", assignment });
+  }
+);
+
+categoryProductRoutes.get(
+  "/menus/:id/branches",
+  authMiddleware,
+  permissionMiddleware("menü listeleme"),
+  async (c) => {
+    const { id } = c.req.param();
+    const branches = await CategoryProductService.getMenuBranches(id);
+    return c.json({ message: "Menu branches retrieved successfully", menuBranches: branches });
+  }
+);
+
+categoryProductRoutes.delete(
+  "/menus/:id/branches/:branchId",
+  authMiddleware,
+  permissionMiddleware("menü şube atama"),
+  async (c) => {
+    const { id, branchId } = c.req.param();
+    await CategoryProductService.removeMenuFromBranch(id, branchId);
+    return c.json({ message: "Menu removed from branch successfully" });
+  }
+);
+
+categoryProductRoutes.get(
+  "/branches/:id/menus",
+  authMiddleware,
+  permissionMiddleware("menü listeleme"),
+  async (c) => {
+    const { id } = c.req.param();
+    const menus = await CategoryProductService.getBranchMenus(id);
+    return c.json({ message: "Branch menus retrieved successfully", menus });
+  }
+);
+
+// Menü - Kategori
+categoryProductRoutes.post(
+  "/menus/:id/categories",
+  authMiddleware,
+  permissionMiddleware("menü kategori ekleme"),
+  async (c) => {
+    const { id } = c.req.param();
+    const body = await c.req.json();
+    const schema = z.object({
+      category: z.string(),
+      parent: z.string().optional(),
+      order: z.number().optional(),
+    });
+    const input = schema.parse(body);
+    const menuCategory = await CategoryProductService.addCategoryToMenu({ ...input, menu: id });
+    return c.json({ message: "Category added to menu successfully", menuCategory });
+  }
+);
+
+categoryProductRoutes.get(
+  "/menus/:id/categories",
+  authMiddleware,
+  permissionMiddleware("menü listeleme"),
+  async (c) => {
+    const { id } = c.req.param();
+    const categories = await CategoryProductService.getMenuCategories(id);
+    return c.json({ message: "Menu categories retrieved successfully", menuCategories: categories });
+  }
+);
+
+categoryProductRoutes.delete(
+  "/menus/:id/categories/:categoryId",
+  authMiddleware,
+  permissionMiddleware("menü kategori ekleme"),
+  async (c) => {
+    const { id, categoryId } = c.req.param();
+    await CategoryProductService.removeCategoryFromMenu(id, categoryId);
+    return c.json({ message: "Category removed from menu successfully" });
+  }
+);
+
+categoryProductRoutes.put(
+  "/menus/:id/categories/:categoryId/order",
+  authMiddleware,
+  permissionMiddleware("menü kategori ekleme"),
+  async (c) => {
+    const { id, categoryId } = c.req.param();
+    const body = await c.req.json();
+    const schema = z.object({
+      order: z.number(),
+    });
+    const input = schema.parse(body);
+    const menuCategory = await CategoryProductService.updateCategoryOrder(id, categoryId, input.order);
+    return c.json({ message: "Category order updated successfully", menuCategory });
+  }
+);
+
+categoryProductRoutes.get(
+  "/menus/:id/categories/hierarchical",
+  authMiddleware,
+  permissionMiddleware("menü listeleme"),
+  async (c) => {
+    const { id } = c.req.param();
+    const categories = await CategoryProductService.getMenuCategoriesHierarchical(id);
+    return c.json({ message: "Menu categories retrieved successfully (hierarchical)", categories });
+  }
+);
+
+categoryProductRoutes.get(
+  "/menus/:id/available-categories",
+  authMiddleware,
+  permissionMiddleware("menü kategori ekleme"),
+  async (c) => {
+    const { id } = c.req.param();
+    const categories = await CategoryProductService.getAvailableCategories(id);
+    return c.json({ message: "Available categories retrieved successfully", categories });
+  }
+);
+
+// Menü - Ürün
+categoryProductRoutes.post(
+  "/menus/:id/products",
+  authMiddleware,
+  permissionMiddleware("menü ürün ekleme"),
+  async (c) => {
+    const { id } = c.req.param();
+    const body = await c.req.json();
+    const schema = z.object({
+      category: z.string(),
+      product: z.string(),
+      order: z.number().optional(),
+    });
+    const input = schema.parse(body);
+    const menuProduct = await CategoryProductService.addProductToMenu({ ...input, menu: id });
+    return c.json({ message: "Product added to menu successfully", menuProduct });
+  }
+);
+
+categoryProductRoutes.get(
+  "/menus/:id/products",
+  authMiddleware,
+  permissionMiddleware("menü listeleme"),
+  async (c) => {
+    const { id } = c.req.param();
+    const categoryId = c.req.query("category");
+    const products = await CategoryProductService.getMenuProducts(id, categoryId || undefined);
+    return c.json({ message: "Menu products retrieved successfully", menuProducts: products });
+  }
+);
+
+categoryProductRoutes.get(
+  "/menus/:id/categories/:categoryId/products",
+  authMiddleware,
+  permissionMiddleware("menü listeleme"),
+  async (c) => {
+    const { id, categoryId } = c.req.param();
+    const products = await CategoryProductService.getCategoryProducts(id, categoryId);
+    return c.json({ message: "Category products retrieved successfully", products });
+  }
+);
+
+categoryProductRoutes.delete(
+  "/menus/:id/products/:productId",
+  authMiddleware,
+  permissionMiddleware("menü ürün ekleme"),
+  async (c) => {
+    const { id, productId } = c.req.param();
+    const categoryId = c.req.query("category");
+    if (!categoryId) {
+      return c.json({ error: "Category parameter is required" }, 400);
+    }
+    await CategoryProductService.removeProductFromMenu(id, categoryId, productId);
+    return c.json({ message: "Product removed from menu successfully" });
+  }
+);
+
+categoryProductRoutes.put(
+  "/menus/:id/products/:productId/order",
+  authMiddleware,
+  permissionMiddleware("menü ürün ekleme"),
+  async (c) => {
+    const { id, productId } = c.req.param();
+    const categoryId = c.req.query("category");
+    if (!categoryId) {
+      return c.json({ error: "Category parameter is required" }, 400);
+    }
+    const body = await c.req.json();
+    const schema = z.object({
+      order: z.number(),
+    });
+    const input = schema.parse(body);
+    const menuProduct = await CategoryProductService.updateProductOrder(id, categoryId, productId, input.order);
+    return c.json({ message: "Product order updated successfully", menuProduct });
+  }
+);
+
+categoryProductRoutes.get(
+  "/menus/:id/available-products",
+  authMiddleware,
+  permissionMiddleware("menü ürün ekleme"),
+  async (c) => {
+    const { id } = c.req.param();
+    const categoryId = c.req.query("category");
+    if (!categoryId) {
+      return c.json({ error: "Category parameter is required" }, 400);
+    }
+    const products = await CategoryProductService.getAvailableProducts(id, categoryId);
+    return c.json({ message: "Available products retrieved successfully", products });
+  }
+);
+
+// Ürün - Mutfak atama
+categoryProductRoutes.post(
+  "/products/:id/kitchens",
+  authMiddleware,
+  permissionMiddleware("ürün mutfak atama"),
+  async (c) => {
+    const { id } = c.req.param();
+    const body = await c.req.json();
+    const schema = z.object({
+      kitchen: z.string(),
+      branch: z.string(),
+    });
+    const input = schema.parse(body);
+    const assignment = await CategoryProductService.assignProductToKitchen({ ...input, product: id });
+    return c.json({ message: "Product assigned to kitchen successfully", assignment });
+  }
+);
+
+categoryProductRoutes.get(
+  "/products/:id/kitchens",
+  authMiddleware,
+  permissionMiddleware("ürün listeleme"),
+  async (c) => {
+    const { id } = c.req.param();
+    const branchId = c.req.query("branch");
+    const kitchens = await CategoryProductService.getProductKitchens(id, branchId || undefined);
+    return c.json({ message: "Product kitchens retrieved successfully", kitchens });
+  }
+);
+
+categoryProductRoutes.delete(
+  "/products/:id/kitchens/:kitchenId",
+  authMiddleware,
+  permissionMiddleware("ürün mutfak atama"),
+  async (c) => {
+    const { id, kitchenId } = c.req.param();
+    const branchId = c.req.query("branch");
+    if (!branchId) {
+      return c.json({ error: "Branch parameter is required" }, 400);
+    }
+    await CategoryProductService.removeProductFromKitchen(id, kitchenId, branchId);
+    return c.json({ message: "Product removed from kitchen successfully" });
+  }
+);
+
+categoryProductRoutes.get(
+  "/kitchens/:id/products",
+  authMiddleware,
+  permissionMiddleware("mutfak listeleme"),
+  async (c) => {
+    const { id } = c.req.param();
+    const products = await CategoryProductService.getKitchenProducts(id);
+    return c.json({ message: "Kitchen products retrieved successfully", products });
+  }
+);
 export default categoryProductRoutes;

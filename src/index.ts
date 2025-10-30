@@ -5,7 +5,6 @@ import authRoutes from './services/AuthService/authRoute'
 import {rolePermissionRoutes} from './services/RolePermissionService/rolePermissionRoutes'
 import companyBranchRoutes from './services/CompanyBranchService/companyBranchRoutes'
 import categoryProductRoutes from './services/CategoryProductService/categoryProductRoutes'
-import menuRoutes from './services/CategoryProductService/menuRoutes'
 import orderRoutes from './services/OrderTableService/orderRoutes'
 import orderItemRoutes from './services/OrderTableService/orderItemRoutes'
 import orderItemIngredientRoutes from './services/OrderTableService/orderItemIngredientRoutes'
@@ -28,7 +27,6 @@ app.route('/auth', authRoutes)
 app.route('/role-permission', rolePermissionRoutes)
 app.route('/companies-branches', companyBranchRoutes)
 app.route('/category-product', categoryProductRoutes)
-app.route('/menus', menuRoutes)
 app.route('/orders', orderRoutes)
 app.route('/order-items', orderItemRoutes)
 app.route('/order-item-ingredients', orderItemIngredientRoutes)
