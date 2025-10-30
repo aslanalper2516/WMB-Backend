@@ -458,7 +458,7 @@ categoryProductRoutes.post(
         const schema = z.object({
           salesMethod: z.string(),
           price: z.number(),
-          currencyUnit: z.string().optional(),
+          currencyUnit: z.string(),
           branch: z.string().optional(),
           company: z.string().optional(),
         });
@@ -500,8 +500,8 @@ categoryProductRoutes.put(
     const body = await c.req.json();
     const schema = z.object({
       salesMethod: z.string().optional(),
-      amount: z.number().optional(),
-      unit: z.string().optional(),
+      price: z.number().optional(),
+      currencyUnit: z.string().optional(),
     });
     const input = schema.parse(body);
 

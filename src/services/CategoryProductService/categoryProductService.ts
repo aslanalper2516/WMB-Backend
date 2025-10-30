@@ -225,7 +225,7 @@ export const CategoryProductService = {
     product: string; 
     salesMethod: string; 
     price: number; 
-    currencyUnit?: string;
+    currencyUnit: string;
     branch?: string;
     company?: string;
   }) {
@@ -233,12 +233,10 @@ export const CategoryProductService = {
     const cleanData: any = {
       product: data.product,
       salesMethod: data.salesMethod,
-      price: data.price
+      price: data.price,
+      currencyUnit: data.currencyUnit
     };
     
-    if (data.currencyUnit && data.currencyUnit.trim() !== '') {
-      cleanData.currencyUnit = data.currencyUnit;
-    }
     if (data.branch && data.branch.trim() !== '') {
       cleanData.branch = data.branch;
     }
@@ -269,13 +267,18 @@ export const CategoryProductService = {
 
   async updatePrice(id: string, data: { 
     salesMethod?: string; 
-    amount?: number; 
-    unit?: string; 
+    price?: number; 
+    currencyUnit?: string; 
   }) {
-    return await ProductPrice.findByIdAndUpdate(id, data, { new: true })
+    const update: any = {};
+    if (data.salesMethod) update.salesMethod = data.salesMethod;
+    if (typeof data.price === 'number') update.price = data.price;
+    if (data.currencyUnit) update.currencyUnit = data.currencyUnit;
+
+    return await ProductPrice.findByIdAndUpdate(id, update, { new: true })
       .populate("product")
       .populate("salesMethod")
-      .populate("unit");
+      .populate("currencyUnit");
   },
 
   async deletePrice(id: string) {
