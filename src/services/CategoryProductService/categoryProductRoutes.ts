@@ -324,6 +324,107 @@ categoryProductRoutes.delete(
 );
 
 /* ============================================================
+ *  INGREDIENT CATEGORY ROUTES
+ * ============================================================*/
+
+/**
+ * 📍 GET /ingredient-categories
+ * Malzeme kategorilerini listeler.
+ * Sadece "malzeme listeleme" iznine sahip kullanıcılar erişebilir.
+ * Query param: ?company=companyId
+ */
+categoryProductRoutes.get(
+  "/ingredient-categories",
+  authMiddleware,
+  permissionMiddleware("malzeme listeleme"),
+  async (c) => {
+    const companyId = c.req.query("company");
+    const categories = await CategoryProductService.getIngredientCategories(companyId || undefined);
+    return c.json({ message: "Ingredient categories retrieved successfully", categories });
+  }
+);
+
+/**
+ * 📍 POST /ingredient-categories
+ * Yeni malzeme kategorisi oluşturur.
+ * Sadece "malzeme oluşturma" iznine sahip kullanıcılar erişebilir.
+ */
+categoryProductRoutes.post(
+  "/ingredient-categories",
+  authMiddleware,
+  permissionMiddleware("malzeme oluşturma"),
+  async (c) => {
+    const body = await c.req.json();
+    const schema = z.object({
+      name: z.string().min(1),
+      description: z.string().optional(),
+      company: z.string(),
+    });
+    const input = schema.parse(body);
+
+    const category = await CategoryProductService.createIngredientCategory(input);
+    return c.json({ message: "Ingredient category created successfully", category });
+  }
+);
+
+/**
+ * 📍 GET /ingredient-categories/:id
+ * Malzeme kategori detayını getirir.
+ * Sadece "malzeme listeleme" iznine sahip kullanıcılar erişebilir.
+ */
+categoryProductRoutes.get(
+  "/ingredient-categories/:id",
+  authMiddleware,
+  permissionMiddleware("malzeme listeleme"),
+  async (c) => {
+    const { id } = c.req.param();
+    const category = await CategoryProductService.getIngredientCategoryById(id);
+    return c.json({ message: "Ingredient category retrieved successfully", category });
+  }
+);
+
+/**
+ * 📍 PUT /ingredient-categories/:id
+ * Malzeme kategori bilgilerini günceller.
+ * Sadece "malzeme güncelleme" iznine sahip kullanıcılar erişebilir.
+ */
+categoryProductRoutes.put(
+  "/ingredient-categories/:id",
+  authMiddleware,
+  permissionMiddleware("malzeme güncelleme"),
+  async (c) => {
+    const { id } = c.req.param();
+    const body = await c.req.json();
+    const schema = z.object({
+      name: z.string().optional(),
+      description: z.string().optional(),
+      isActive: z.boolean().optional(),
+      company: z.string().optional(),
+    });
+    const input = schema.parse(body);
+
+    const category = await CategoryProductService.updateIngredientCategory(id, input);
+    return c.json({ message: "Ingredient category updated successfully", category });
+  }
+);
+
+/**
+ * 📍 DELETE /ingredient-categories/:id
+ * Malzeme kategorisini siler.
+ * Sadece "malzeme silme" iznine sahip kullanıcılar erişebilir.
+ */
+categoryProductRoutes.delete(
+  "/ingredient-categories/:id",
+  authMiddleware,
+  permissionMiddleware("malzeme silme"),
+  async (c) => {
+    const { id } = c.req.param();
+    await CategoryProductService.deleteIngredientCategory(id);
+    return c.json({ message: "Ingredient category deleted successfully" });
+  }
+);
+
+/* ============================================================
  *  INGREDIENT ROUTES
  * ============================================================*/
 
@@ -331,7 +432,7 @@ categoryProductRoutes.delete(
  * 📍 GET /ingredients
  * Malzemeleri listeler.
  * Sadece "malzeme listeleme" iznine sahip kullanıcılar erişebilir.
- * Query param: ?company=companyId
+ * Query params: ?company=companyId&category=categoryId
  */
 categoryProductRoutes.get(
   "/ingredients",
@@ -339,7 +440,11 @@ categoryProductRoutes.get(
   permissionMiddleware("malzeme listeleme"),
   async (c) => {
     const companyId = c.req.query("company");
-    const ingredients = await CategoryProductService.getIngredients(companyId || undefined);
+    const categoryId = c.req.query("category");
+    const ingredients = await CategoryProductService.getIngredients(
+      companyId || undefined,
+      categoryId || undefined
+    );
     return c.json({ message: "Ingredients retrieved successfully", ingredients });
   }
 );
@@ -359,6 +464,7 @@ categoryProductRoutes.post(
       name: z.string().min(1),
       description: z.string().optional(),
       company: z.string(),
+      category: z.string().optional(),
     });
     const input = schema.parse(body);
 
@@ -400,10 +506,17 @@ categoryProductRoutes.put(
       description: z.string().optional(),
       isActive: z.boolean().optional(),
       company: z.string().optional(),
+      category: z.string().nullable().optional(),
     });
     const input = schema.parse(body);
+    
+    // category null ise undefined'a çevir
+    const updateData = {
+      ...input,
+      category: input.category === null ? undefined : input.category
+    };
 
-    const ingredient = await CategoryProductService.updateIngredient(id, input);
+    const ingredient = await CategoryProductService.updateIngredient(id, updateData);
     return c.json({ message: "Ingredient updated successfully", ingredient });
   }
 );

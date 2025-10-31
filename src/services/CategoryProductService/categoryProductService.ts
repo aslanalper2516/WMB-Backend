@@ -8,6 +8,7 @@ import { MenuProduct } from "./models/menuProduct";
 import { ProductKitchen } from "./models/productKitchen";
 import { ProductIngredients } from "./models/productIngredients";
 import { Ingredient } from "./models/ingredient";
+import { IngredientCategory } from "./models/ingredientCategory";
 import { ProductPrice } from "./models/productPrice";
 import { BranchSalesMethod } from "./models/branchSalesMethod";
 import { SalesMethod } from "./models/salesMethod";
@@ -213,9 +214,9 @@ export const CategoryProductService = {
   },
 
   /* ---------------------------
-   *  INGREDIENT OPERATIONS
+   *  INGREDIENT CATEGORY OPERATIONS
    * -------------------------*/
-  async createIngredient(data: { 
+  async createIngredientCategory(data: { 
     name: string; 
     description?: string;
     company: string; 
@@ -237,23 +238,23 @@ export const CategoryProductService = {
       cleanData.description = data.description;
     }
     
-    return await Ingredient.create(cleanData);
+    return await IngredientCategory.create(cleanData);
   },
 
-  async getIngredients(companyId?: string) {
+  async getIngredientCategories(companyId?: string) {
     const query: any = { isActive: true };
     if (companyId) query.company = companyId;
-    return await Ingredient.find(query)
+    return await IngredientCategory.find(query)
       .populate("company")
       .sort({ name: 1 });
   },
 
-  async getIngredientById(id: string) {
-    return await Ingredient.findById(id)
+  async getIngredientCategoryById(id: string) {
+    return await IngredientCategory.findById(id)
       .populate("company");
   },
 
-  async updateIngredient(id: string, data: { 
+  async updateIngredientCategory(id: string, data: { 
     name?: string; 
     description?: string;
     isActive?: boolean;
@@ -282,8 +283,140 @@ export const CategoryProductService = {
       }
     }
     
-    return await Ingredient.findByIdAndUpdate(id, cleanData, { new: true })
+    return await IngredientCategory.findByIdAndUpdate(id, cleanData, { new: true })
       .populate("company");
+  },
+
+  async deleteIngredientCategory(id: string) {
+    // Bu kategorinin kullanıldığı ingredient kayıtlarını kontrol et
+    const ingredients = await Ingredient.find({ category: id });
+    if (ingredients.length > 0) {
+      throw new Error('Bu kategori bir veya daha fazla malzemede kullanılıyor. Önce malzemelerden çıkarınız.');
+    }
+    return await IngredientCategory.findByIdAndDelete(id);
+  },
+
+  /* ---------------------------
+   *  INGREDIENT OPERATIONS
+   * -------------------------*/
+  async createIngredient(data: { 
+    name: string; 
+    description?: string;
+    company: string; 
+    category?: string;
+  }) {
+    // Şirket kontrolü
+    const company = await Company.findById(data.company);
+    if (!company) {
+      throw new Error("Şirket bulunamadı");
+    }
+    if (company.isDeleted) {
+      throw new Error("Şirket silinmiş durumda");
+    }
+    
+    // Eğer category belirtilmişse, kategori kontrolü
+    if (data.category) {
+      const category = await IngredientCategory.findById(data.category);
+      if (!category) {
+        throw new Error("Malzeme kategorisi bulunamadı");
+      }
+      if (!category.isActive) {
+        throw new Error("Malzeme kategorisi aktif değil");
+      }
+      if (category.company.toString() !== data.company) {
+        throw new Error("Seçilen kategori, belirtilen şirkete ait değil");
+      }
+    }
+    
+    const cleanData: any = {
+      name: data.name,
+      company: data.company
+    };
+    if (data.description && data.description.trim() !== '') {
+      cleanData.description = data.description;
+    }
+    if (data.category) {
+      cleanData.category = data.category;
+    }
+    
+    return await Ingredient.create(cleanData);
+  },
+
+  async getIngredients(companyId?: string, categoryId?: string) {
+    const query: any = { isActive: true };
+    if (companyId) query.company = companyId;
+    if (categoryId) query.category = categoryId;
+    return await Ingredient.find(query)
+      .populate("company")
+      .populate("category")
+      .sort({ name: 1 });
+  },
+
+  async getIngredientById(id: string) {
+    return await Ingredient.findById(id)
+      .populate("company")
+      .populate("category");
+  },
+
+  async updateIngredient(id: string, data: { 
+    name?: string; 
+    description?: string;
+    isActive?: boolean;
+    company?: string;
+    category?: string;
+  }) {
+    const existing = await Ingredient.findById(id);
+    if (!existing) {
+      throw new Error("Malzeme bulunamadı");
+    }
+    
+    // Eğer company değiştiriliyorsa, şirket kontrolü
+    if (data.company) {
+      const company = await Company.findById(data.company);
+      if (!company) {
+        throw new Error("Şirket bulunamadı");
+      }
+      if (company.isDeleted) {
+        throw new Error("Şirket silinmiş durumda");
+      }
+    }
+    
+    // Eğer category değiştiriliyorsa, kategori kontrolü
+    if (data.category !== undefined) {
+      if (data.category) {
+        const category = await IngredientCategory.findById(data.category);
+        if (!category) {
+          throw new Error("Malzeme kategorisi bulunamadı");
+        }
+        if (!category.isActive) {
+          throw new Error("Malzeme kategorisi aktif değil");
+        }
+        
+        const companyId = data.company || existing.company;
+        if (category.company.toString() !== companyId.toString()) {
+          throw new Error("Seçilen kategori, belirtilen şirkete ait değil");
+        }
+      }
+    }
+    
+    const cleanData: any = {};
+    if (data.name !== undefined) cleanData.name = data.name;
+    if (data.isActive !== undefined) cleanData.isActive = data.isActive;
+    if (data.company !== undefined) cleanData.company = data.company;
+    if (data.category !== undefined) {
+      cleanData.category = data.category || null;
+    }
+    if (data.description !== undefined) {
+      if (data.description && data.description.trim() !== '') {
+        cleanData.description = data.description;
+      } else {
+        cleanData.description = undefined;
+      }
+    }
+    
+    return await Ingredient.findByIdAndUpdate(id, cleanData, { new: true })
+      .populate("company")
+      .populate("category");
   },
 
   async deleteIngredient(id: string) {
