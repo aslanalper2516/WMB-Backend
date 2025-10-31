@@ -280,6 +280,17 @@ export const CategoryProductService = {
       }
     }
     
+    // Satış yönteminin bu şubeye atanmış olup olmadığı kontrolü
+    const branchSalesMethod = await BranchSalesMethod.findOne({
+      branch: data.branch,
+      salesMethod: data.salesMethod,
+      isActive: true
+    });
+    
+    if (!branchSalesMethod) {
+      throw new Error("Bu satış yöntemi bu şubeye atanmamış");
+    }
+    
     // Aynı ürün + satış yöntemi + şube kombinasyonu kontrolü
     const existing = await ProductPrice.findOne({
       product: data.product,
