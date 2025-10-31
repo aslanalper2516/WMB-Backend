@@ -11,7 +11,7 @@ const authRoutes = new Hono();
 // authMiddleware ile kimlik doğrulama gerektirir
 // permissionMiddleware ile "kullanıcı listeleme" izni kontrol edilir
 // UserService.getUsers() ile veritabanından tüm kullanıcılar çekilir
-// Kullanıcı bilgileri (id, name, email, role, branch, company, createdAt) döndürülür
+// Kullanıcı bilgileri (id, name, email, role, createdAt) döndürülür
 authRoutes.get("/users", authMiddleware, permissionMiddleware("kullanıcı listeleme"), async (c) => {
   const users = await UserService.getUsers();
   return c.json({
@@ -21,8 +21,6 @@ authRoutes.get("/users", authMiddleware, permissionMiddleware("kullanıcı liste
       name: user.name,
       email: user.email,
       role: user.role,
-      branch: user.branch,
-      company: user.company,
       createdAt: user.createdAt
     }))
   });
@@ -41,14 +39,7 @@ authRoutes.post("/register", authMiddleware, permissionMiddleware("yeni kullanı
     const body = await c.req.json();
 
     // Zod validate
-    const validatedData = registerSchema.parse(body) as {
-      name: string;
-      email: string;
-      password: string;
-      role: string;
-      branch?: string;
-      company?: string;
-    };
+    const validatedData = registerSchema.parse(body);
 
     const user = await UserService.createUser(validatedData);
 
@@ -58,9 +49,7 @@ authRoutes.post("/register", authMiddleware, permissionMiddleware("yeni kullanı
         id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role,
-        branch: user.branch,
-        company: user.company,
+        role: user.role
       },
     });
   } catch (error) {
@@ -171,9 +160,7 @@ authRoutes.get("/me", authMiddleware,async (c) => {
       id: user._id,
       name: (user as any).name,
       email: (user as any).email,
-      role: (user as any).role,
-      branch: (user as any).branch,
-      company: (user as any).company
+      role: (user as any).role
     }
   });
 });
@@ -198,9 +185,7 @@ authRoutes.put("/users/:id", authMiddleware, permissionMiddleware("kullanıcı g
         id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role,
-        branch: user.branch,
-        company: user.company,
+        role: user.role
       },
     });
   } catch (error) {
@@ -256,8 +241,6 @@ authRoutes.get("/users/:id", authMiddleware, permissionMiddleware("kullanıcı g
         name: user.name,
         email: user.email,
         role: user.role,
-        branch: user.branch,
-        company: user.company,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt
       },
@@ -307,9 +290,7 @@ authRoutes.put("/profile", authMiddleware, async (c) => {
         id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role,
-        branch: user.branch,
-        company: user.company,
+        role: user.role
       },
     });
   } catch (error) {

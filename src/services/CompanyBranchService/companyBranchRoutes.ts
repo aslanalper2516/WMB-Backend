@@ -46,9 +46,6 @@ companyBranchRoutes.post(
       neighborhood: z.string().optional(),
       street: z.string().optional(),
       address: z.string().optional(),
-      manager: z.string().optional(),
-      managerEmail: z.string().email().optional(),
-      managerPhone: z.string().optional(),
     });
     const input = schema.parse(body);
 
@@ -94,9 +91,6 @@ companyBranchRoutes.put(
       neighborhood: z.string().optional(),
       street: z.string().optional(),
       address: z.string().optional(),
-      manager: z.string().optional(),
-      managerEmail: z.string().email().optional(),
-      managerPhone: z.string().optional(),
     });
     const input = schema.parse(body);
 
@@ -164,9 +158,6 @@ companyBranchRoutes.post(
       street: z.string().optional(),
       address: z.string().optional(),
       company: z.string(),
-      manager: z.string().optional(),
-      managerEmail: z.string().email().optional(),
-      managerPhone: z.string().optional(),
       tables: z.number().optional(),
     });
     const input = schema.parse(body);
@@ -213,9 +204,6 @@ companyBranchRoutes.put(
       neighborhood: z.string().optional(),
       street: z.string().optional(),
       address: z.string().optional(),
-      manager: z.string().optional(),
-      managerEmail: z.string().email().optional(),
-      managerPhone: z.string().optional(),
       tables: z.number().optional(),
     });
     const input = schema.parse(body);
@@ -369,5 +357,148 @@ companyBranchRoutes.get(
   }
 );
 
+/* ============================================================
+ *  USER COMPANY BRANCH ROUTES
+ * ============================================================*/
+
+/**
+ * 📍 POST /user-company-branches
+ * Kullanıcıyı şirket/şubeye atar.
+ * Sadece "kullanıcı güncelleme" iznine sahip kullanıcılar erişebilir.
+ */
+companyBranchRoutes.post(
+  "/user-company-branches",
+  authMiddleware,
+  permissionMiddleware("kullanıcı güncelleme"),
+  async (c) => {
+    const body = await c.req.json();
+    const schema = z.object({
+      user: z.string(),
+      company: z.string(),
+      branch: z.string().optional(),
+      isManager: z.boolean().optional(),
+      managerType: z.enum(["company", "branch"]).optional(),
+    });
+    const input = schema.parse(body);
+
+    const assignment = await CompanyBranchService.assignUserToCompanyBranch(input);
+    return c.json({ message: "User assigned to company/branch successfully", assignment });
+  }
+);
+
+/**
+ * 📍 GET /user-company-branches
+ * Kullanıcı-şirket-şube ilişkilerini listeler.
+ * Query params: ?user=userId&company=companyId&branch=branchId
+ * Sadece "kullanıcı listeleme" iznine sahip kullanıcılar erişebilir.
+ */
+companyBranchRoutes.get(
+  "/user-company-branches",
+  authMiddleware,
+  permissionMiddleware("kullanıcı listeleme"),
+  async (c) => {
+    const userId = c.req.query("user");
+    const companyId = c.req.query("company");
+    const branchId = c.req.query("branch");
+    
+    const assignments = await CompanyBranchService.getUserCompanyBranches(
+      userId || undefined,
+      companyId || undefined,
+      branchId || undefined
+    );
+    return c.json({ message: "User company branch assignments retrieved successfully", assignments });
+  }
+);
+
+/**
+ * 📍 GET /user-company-branches/:id
+ * Belirli bir kullanıcı-şirket-şube ilişkisini getirir.
+ * Sadece "kullanıcı görüntüleme" iznine sahip kullanıcılar erişebilir.
+ */
+companyBranchRoutes.get(
+  "/user-company-branches/:id",
+  authMiddleware,
+  permissionMiddleware("kullanıcı görüntüleme"),
+  async (c) => {
+    const { id } = c.req.param();
+    const assignment = await CompanyBranchService.getUserCompanyBranchById(id);
+    return c.json({ message: "User company branch assignment retrieved successfully", assignment });
+  }
+);
+
+/**
+ * 📍 PUT /user-company-branches/:id
+ * Kullanıcı-şirket-şube ilişkisini günceller.
+ * Sadece "kullanıcı güncelleme" iznine sahip kullanıcılar erişebilir.
+ */
+companyBranchRoutes.put(
+  "/user-company-branches/:id",
+  authMiddleware,
+  permissionMiddleware("kullanıcı güncelleme"),
+  async (c) => {
+    const { id } = c.req.param();
+    const body = await c.req.json();
+    const schema = z.object({
+      branch: z.string().nullable().optional(),
+      isManager: z.boolean().optional(),
+      managerType: z.enum(["company", "branch"]).optional(),
+      isActive: z.boolean().optional(),
+    });
+    const input = schema.parse(body);
+
+    const assignment = await CompanyBranchService.updateUserCompanyBranch(id, input);
+    return c.json({ message: "User company branch assignment updated successfully", assignment });
+  }
+);
+
+/**
+ * 📍 DELETE /user-company-branches/:id
+ * Kullanıcı-şirket-şube ilişkisini siler.
+ * Sadece "kullanıcı silme" iznine sahip kullanıcılar erişebilir.
+ */
+companyBranchRoutes.delete(
+  "/user-company-branches/:id",
+  authMiddleware,
+  permissionMiddleware("kullanıcı silme"),
+  async (c) => {
+    const { id } = c.req.param();
+    await CompanyBranchService.deleteUserCompanyBranch(id);
+    return c.json({ message: "User company branch assignment deleted successfully" });
+  }
+);
+
+/**
+ * 📍 GET /users/:id/companies
+ * Belirli bir kullanıcının şirket/şube atamalarını listeler.
+ * Sadece "kullanıcı görüntüleme" iznine sahip kullanıcılar erişebilir.
+ */
+companyBranchRoutes.get(
+  "/users/:id/companies",
+  authMiddleware,
+  permissionMiddleware("kullanıcı görüntüleme"),
+  async (c) => {
+    const { id } = c.req.param();
+    const assignments = await CompanyBranchService.getUserCompanies(id);
+    return c.json({ message: "User companies retrieved successfully", assignments });
+  }
+);
+
+/**
+ * 📍 GET /companies/:id/users
+ * Belirli bir şirketin kullanıcılarını listeler.
+ * Query param: ?branch=branchId (opsiyonel)
+ * Sadece "kullanıcı listeleme" iznine sahip kullanıcılar erişebilir.
+ */
+companyBranchRoutes.get(
+  "/companies/:id/users",
+  authMiddleware,
+  permissionMiddleware("kullanıcı listeleme"),
+  async (c) => {
+    const { id } = c.req.param();
+    const branchId = c.req.query("branch");
+    const assignments = await CompanyBranchService.getCompanyUsers(id, branchId || undefined);
+    return c.json({ message: "Company users retrieved successfully", assignments });
+  }
+);
 
 export default companyBranchRoutes;

@@ -14,9 +14,6 @@ const branchSchema = new mongoose.Schema(
     address: { type: String }, // Tam adres (birleştirilmiş)
     
     company: { type: mongoose.Schema.Types.ObjectId, ref: "Company", required: true }, // Hangi şirkete ait
-    manager: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // Şube yöneticisi
-    managerEmail: { type: String }, // Şube yöneticisi email
-    managerPhone: { type: String }, // Şube yöneticisi telefon
     tables: { type: Number, default: 0 }, // Şubedeki masa sayısı
     
     // 🧩 Soft delete alanları

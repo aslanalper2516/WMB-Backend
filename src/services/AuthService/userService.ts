@@ -7,7 +7,7 @@ import * as bcrypt from "bcryptjs";
 import * as crypto from "crypto";
 
 export class UserService {
-  static async createUser(data: { name: string; email: string; password: string; role: string; branch?: string; company?: string }) {
+  static async createUser(data: { name: string; email: string; password: string; role: string }) {
     const hashedPassword = await bcrypt.hash(data.password, 12);
 
     let roleId;
@@ -29,22 +29,20 @@ export class UserService {
       name: data.name,
       email: data.email,
       password: hashedPassword,
-      role: roleId,
-      branch: data.branch,
-      company: data.company
+      role: roleId
     });
   }
 
   static async getUsers() {
-    return await User.find().populate("role").populate("branch").populate("company");
+    return await User.find().populate("role");
   }
 
   static async getUserByEmail(email: string) {
-    return await User.findOne({ email }).populate("role").populate("branch").populate("company");
+    return await User.findOne({ email }).populate("role");
   }
 
   static async login(email: string, password: string, userAgent?: string, ipAddress?: string) {
-    const user = await User.findOne({ email }).populate("role").populate("branch").populate("company");
+    const user = await User.findOne({ email }).populate("role");
     if (!user) {
       throw new Error("Invalid credentials");
     }
@@ -71,9 +69,7 @@ export class UserService {
         id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role,
-        branch: user.branch,
-        company: user.company,
+        role: user.role
       },
       sessionToken,
     };
@@ -93,7 +89,7 @@ export class UserService {
       expiresAt: { $gt: new Date() },
     }).populate({
       path: "userId",
-      populate: [{ path: "role" }, { path: "branch" }, { path: "company" }],
+      populate: [{ path: "role" }],
     });
 
     if (!session || !session.userId) {
@@ -107,7 +103,7 @@ export class UserService {
     return await bcrypt.compare(password, hashedPassword);
   }
 
-  static async updateUser(userId: string, data: { name?: string; email?: string; password?: string; role?: string; branch?: string; company?: string }) {
+  static async updateUser(userId: string, data: { name?: string; email?: string; password?: string; role?: string }) {
     const updateData: any = {};
     
     if (data.name) updateData.name = data.name;
@@ -124,13 +120,9 @@ export class UserService {
         updateData.role = roleDoc._id;
       }
     }
-    if (data.branch) updateData.branch = data.branch;
-    if (data.company) updateData.company = data.company;
 
     const user = await User.findByIdAndUpdate(userId, updateData, { new: true })
-      .populate("role")
-      .populate("branch")
-      .populate("company");
+      .populate("role");
     
     if (!user) {
       throw new Error("User not found");
@@ -157,9 +149,7 @@ export class UserService {
 
   static async getUserById(userId: string) {
     const user = await User.findById(userId)
-      .populate("role")
-      .populate("branch")
-      .populate("company");
+      .populate("role");
     
     if (!user) {
       throw new Error("User not found");

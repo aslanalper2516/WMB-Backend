@@ -7,6 +7,7 @@ import { Permission } from "../services/RolePermissionService/models/permission"
 import { RolePermission } from "../services/RolePermissionService/models/rolePermission";
 import { Company } from "../services/CompanyBranchService/models/company";
 import { Branch } from "../services/CompanyBranchService/models/branch";
+import { UserCompanyBranch } from "../services/CompanyBranchService/models/userCompanyBranch";
 import { SalesMethod } from "../services/CategoryProductService/models/salesMethod";
 
 dotenv.config();
@@ -142,8 +143,7 @@ async function seedDatabase() {
         name: "Alper Aslan",
         email: "aslanalper2516@gmail.com",
         password: hashedPassword,
-        role: superAdminRole._id,
-        branch: null // Super admin global olduğu için branch yok
+        role: superAdminRole._id
       },
       { upsert: true, new: true }
     );
@@ -161,10 +161,7 @@ async function seedDatabase() {
         district: "Kağıthane",
         neighborhood: "Merkez Mahallesi",
         street: "Teknoloji Caddesi",
-        address: "Kağıthane/İstanbul",
-        manager: user._id,
-        managerEmail: "alper@wmb.net",
-        managerPhone: "+90 537 797 9125"
+        address: "Kağıthane/İstanbul"
       },
       { upsert: true, new: true }
     );
@@ -184,14 +181,49 @@ async function seedDatabase() {
         street: "Teknoloji Caddesi",
         address: "Kağıthane/İstanbul",
         company: company._id,
-        manager: user._id,
-        managerEmail: "kagithane-manager@wmb.net",
-        managerPhone: "+90 537 797 9126",
         tables: 0
       },
       { upsert: true, new: true }
     );
     console.log("✅ Branch created.");
+
+    // 5.5️⃣ UserCompanyBranch ilişkisi oluştur
+    console.log("🔗 Creating user-company-branch relationship...");
+    await UserCompanyBranch.findOneAndUpdate(
+      {
+        user: user._id,
+        company: company._id,
+        branch: branch._id
+      },
+      {
+        user: user._id,
+        company: company._id,
+        branch: branch._id,
+        isManager: true,
+        managerType: "branch",
+        isActive: true
+      },
+      { upsert: true, new: true }
+    );
+    
+    // Şirket yöneticisi olarak da ekle
+    await UserCompanyBranch.findOneAndUpdate(
+      {
+        user: user._id,
+        company: company._id,
+        branch: null
+      },
+      {
+        user: user._id,
+        company: company._id,
+        branch: null,
+        isManager: true,
+        managerType: "company",
+        isActive: true
+      },
+      { upsert: true, new: true }
+    );
+    console.log("✅ User-company-branch relationships created.");
 
     // 6️⃣ RolePermission ilişkilerini oluştur
     console.log("🔗 Creating role-permission relationships...");
@@ -327,6 +359,7 @@ async function seedDatabase() {
     console.log(`   - 1 company created (WMB Yazılım)`);
     console.log(`   - 1 user created (Alper Aslan)`);
     console.log(`   - 1 branch created (Kağıthane Şubesi)`);
+    console.log(`   - 2 user-company-branch relationships created`);
     console.log(`   - ${createdPermissions.length} role-permission relationships created`);
     console.log(`   - 3 main sales methods and 6 sub-sales methods created`);
     

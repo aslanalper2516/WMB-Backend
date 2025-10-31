@@ -12,10 +12,6 @@ const companySchema = new mongoose.Schema(
     neighborhood: { type: String }, // Mahalle
     street: { type: String }, // Sokak
     address: { type: String }, // Tam adres (birleştirilmiş)
-    
-    manager: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // Şirket yöneticisi
-    managerEmail: { type: String }, // Şirket yöneticisi email
-    managerPhone: { type: String }, // Şirket yöneticisi telefon
 
     // 🧩 Soft delete alanları
     isDeleted: { type: Boolean, default: false },
