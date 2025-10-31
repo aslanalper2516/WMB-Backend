@@ -490,7 +490,7 @@ export const CategoryProductService = {
   },
 
   async getCategorySalesMethods(categoryId: string) {
-    return await SalesMethod.find({ category: categoryId, isActive: true })
+    return await SalesMethod.find({ category: categoryId })
       .populate('category', 'name')
       .sort({ name: 1 });
   },
