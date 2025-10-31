@@ -557,8 +557,9 @@ categoryProductRoutes.get(
 
 /**
  * 📍 POST /branches/:id/sales-methods
- * Şubeye satış yöntemi atar.
+ * Şubeye satış yöntemi atar (tek veya çoklu).
  * Sadece "satış yöntemi atama" iznine sahip kullanıcılar erişebilir.
+ * Body: { salesMethod: string } veya { salesMethods: string[] }
  */
 categoryProductRoutes.post(
   "/branches/:id/sales-methods",
@@ -567,6 +568,27 @@ categoryProductRoutes.post(
   async (c) => {
     const { id } = c.req.param();
     const body = await c.req.json();
+    
+    // Çoklu atama kontrolü
+    if (body.salesMethods && Array.isArray(body.salesMethods)) {
+      const schema = z.object({
+        salesMethods: z.array(z.string()),
+      });
+      const input = schema.parse(body);
+      
+      const result = await CategoryProductService.assignSalesMethodsToBranch({
+        branch: id,
+        salesMethods: input.salesMethods
+      });
+      
+      return c.json({ 
+        message: "Sales methods assigned to branch successfully", 
+        assigned: result.results,
+        errors: result.errors.length > 0 ? result.errors : undefined
+      });
+    }
+    
+    // Tekli atama (eski format - backward compatibility)
     const schema = z.object({
       salesMethod: z.string(),
     });
@@ -746,9 +768,129 @@ categoryProductRoutes.delete(
   }
 );
 
+/* ============================================================
+ *  SALES METHOD CATEGORY ROUTES
+ * ============================================================*/
+
+/**
+ * 📍 GET /sales-method-categories
+ * Satış yöntemi kategorilerini listeler.
+ * Sadece "satış yöntemi atama" iznine sahip kullanıcılar erişebilir.
+ */
+categoryProductRoutes.get(
+  "/sales-method-categories",
+  authMiddleware,
+  permissionMiddleware("satış yöntemi atama"),
+  async (c) => {
+    const categories = await CategoryProductService.getSalesMethodCategories();
+    return c.json({ message: "Sales method categories retrieved successfully", categories });
+  }
+);
+
+/**
+ * 📍 POST /sales-method-categories
+ * Yeni satış yöntemi kategori oluşturur.
+ * Sadece "satış yöntemi oluşturma" iznine sahip kullanıcılar erişebilir.
+ */
+categoryProductRoutes.post(
+  "/sales-method-categories",
+  authMiddleware,
+  permissionMiddleware("satış yöntemi oluşturma"),
+  async (c) => {
+    const body = await c.req.json();
+    const schema = z.object({
+      name: z.string().min(1),
+      description: z.string().optional(),
+    });
+    const input = schema.parse(body);
+
+    const category = await CategoryProductService.createSalesMethodCategory(input);
+    return c.json({ message: "Sales method category created successfully", category });
+  }
+);
+
+/**
+ * 📍 GET /sales-method-categories/:id
+ * Belirli bir satış yöntemi kategorisini getirir.
+ * Sadece "satış yöntemi atama" iznine sahip kullanıcılar erişebilir.
+ */
+categoryProductRoutes.get(
+  "/sales-method-categories/:id",
+  authMiddleware,
+  permissionMiddleware("satış yöntemi atama"),
+  async (c) => {
+    const { id } = c.req.param();
+    const category = await CategoryProductService.getSalesMethodCategoryById(id);
+    if (!category) {
+      return c.json({ message: "Sales method category not found" }, 404);
+    }
+    return c.json({ message: "Sales method category retrieved successfully", category });
+  }
+);
+
+/**
+ * 📍 PUT /sales-method-categories/:id
+ * Satış yöntemi kategori bilgilerini günceller.
+ * Sadece "satış yöntemi güncelleme" iznine sahip kullanıcılar erişebilir.
+ */
+categoryProductRoutes.put(
+  "/sales-method-categories/:id",
+  authMiddleware,
+  permissionMiddleware("satış yöntemi güncelleme"),
+  async (c) => {
+    const { id } = c.req.param();
+    const body = await c.req.json();
+    const schema = z.object({
+      name: z.string().optional(),
+      description: z.string().optional(),
+      isActive: z.boolean().optional(),
+    });
+    const input = schema.parse(body);
+
+    const category = await CategoryProductService.updateSalesMethodCategory(id, input);
+    return c.json({ message: "Sales method category updated successfully", category });
+  }
+);
+
+/**
+ * 📍 DELETE /sales-method-categories/:id
+ * Satış yöntemi kategorisini siler.
+ * Sadece "satış yöntemi silme" iznine sahip kullanıcılar erişebilir.
+ */
+categoryProductRoutes.delete(
+  "/sales-method-categories/:id",
+  authMiddleware,
+  permissionMiddleware("satış yöntemi silme"),
+  async (c) => {
+    const { id } = c.req.param();
+    await CategoryProductService.deleteSalesMethodCategory(id);
+    return c.json({ message: "Sales method category deleted successfully" });
+  }
+);
+
+/**
+ * 📍 GET /sales-method-categories/:id/methods
+ * Kategorinin altındaki satış yöntemlerini listeler.
+ * Sadece "satış yöntemi atama" iznine sahip kullanıcılar erişebilir.
+ */
+categoryProductRoutes.get(
+  "/sales-method-categories/:id/methods",
+  authMiddleware,
+  permissionMiddleware("satış yöntemi atama"),
+  async (c) => {
+    const { id } = c.req.param();
+    const methods = await CategoryProductService.getCategorySalesMethods(id);
+    return c.json({ message: "Category sales methods retrieved successfully", methods });
+  }
+);
+
+/* ============================================================
+ *  SALES METHOD ROUTES
+ * ============================================================*/
+
 /**
  * 📍 GET /sales-methods
- * Satış yöntemlerini listeler.
+ * Satış yöntemlerini listeler. Kategori filtresi opsiyonel.
  * Sadece "satış yöntemi atama" iznine sahip kullanıcılar erişebilir.
  */
 categoryProductRoutes.get(
@@ -756,7 +898,8 @@ categoryProductRoutes.get(
   authMiddleware,
   permissionMiddleware("satış yöntemi atama"),
   async (c) => {
-    const methods = await CategoryProductService.getSalesMethods();
+    const categoryId = c.req.query("category");
+    const methods = await CategoryProductService.getSalesMethods(categoryId || undefined);
     return c.json({ message: "Sales methods retrieved successfully", methods });
   }
 );
@@ -775,7 +918,7 @@ categoryProductRoutes.post(
     const schema = z.object({
       name: z.string().min(1),
       description: z.string().optional(),
-      parent: z.string().optional(),
+      category: z.string(),
     });
     const input = schema.parse(body);
 
@@ -799,7 +942,8 @@ categoryProductRoutes.put(
     const schema = z.object({
       name: z.string().optional(),
       description: z.string().optional(),
-      parent: z.string().optional(),
+      category: z.string().optional(),
+      isActive: z.boolean().optional(),
     });
     const input = schema.parse(body);
 
@@ -821,21 +965,6 @@ categoryProductRoutes.delete(
     const { id } = c.req.param();
     await CategoryProductService.deleteSalesMethod(id);
     return c.json({ message: "Sales method deleted successfully" });
-  }
-);
-
-/**
- * 📍 GET /sales-methods/hierarchy
- * Satış yöntemlerini hiyerarşik yapıda listeler.
- * Sadece "satış yöntemi atama" iznine sahip kullanıcılar erişebilir.
- */
-categoryProductRoutes.get(
-  "/sales-methods/hierarchy",
-  authMiddleware,
-  permissionMiddleware("satış yöntemi atama"),
-  async (c) => {
-    const hierarchy = await CategoryProductService.getSalesMethodsHierarchy();
-    return c.json({ message: "Sales methods hierarchy retrieved successfully", hierarchy });
   }
 );
 

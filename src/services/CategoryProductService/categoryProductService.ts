@@ -10,6 +10,7 @@ import { ProductIngredients } from "./models/productIngredients";
 import { ProductPrice } from "./models/productPrice";
 import { BranchSalesMethod } from "./models/branchSalesMethod";
 import { SalesMethod } from "./models/salesMethod";
+import { SalesMethodCategory } from "./models/salesMethodCategory";
 import { AmountUnit } from "./models/amountUnit";
 import { CurrencyUnit } from "./models/currencyUnit";
 import { Branch } from "../CompanyBranchService/models/branch";
@@ -460,47 +461,103 @@ export const CategoryProductService = {
     return await CurrencyUnit.findByIdAndDelete(id);
   },
 
-  async getSalesMethods() {
-    return await SalesMethod.find().populate('parent', 'name').sort({ name: 1 });
+  /* ---------------------------
+   *  SALES METHOD CATEGORY OPERATIONS
+   * -------------------------*/
+  async getSalesMethodCategories() {
+    return await SalesMethodCategory.find({ isActive: true }).sort({ name: 1 });
   },
 
-  async getSalesMethodsHierarchy() {
-    // Ana kategorileri (parent: null) getir
-    const rootMethods = await SalesMethod.find({ parent: null }).populate('parent', 'name').sort({ name: 1 });
-    
-    // Her ana kategori için alt kategorileri getir
-    const hierarchy = await Promise.all(
-      rootMethods.map(async (rootMethod) => {
-        const children = await SalesMethod.find({ parent: rootMethod._id }).populate('parent', 'name').sort({ name: 1 });
-        return {
-          ...rootMethod.toObject(),
-          children
-        };
-      })
-    );
-    
-    return hierarchy;
+  async getSalesMethodCategoryById(id: string) {
+    return await SalesMethodCategory.findById(id);
   },
 
-  async createSalesMethod(data: { name: string; description?: string; parent?: string }) {
+  async createSalesMethodCategory(data: { name: string; description?: string }) {
+    return await SalesMethodCategory.create(data);
+  },
+
+  async updateSalesMethodCategory(id: string, data: { name?: string; description?: string; isActive?: boolean }) {
+    return await SalesMethodCategory.findByIdAndUpdate(id, data, { new: true });
+  },
+
+  async deleteSalesMethodCategory(id: string) {
+    // Önce bu kategoriye ait satış yöntemlerini kontrol et
+    const salesMethods = await SalesMethod.find({ category: id });
+    if (salesMethods.length > 0) {
+      throw new Error('Bu kategoriye ait satış yöntemleri bulunmaktadır. Önce satış yöntemlerini siliniz.');
+    }
+    return await SalesMethodCategory.findByIdAndDelete(id);
+  },
+
+  async getCategorySalesMethods(categoryId: string) {
+    return await SalesMethod.find({ category: categoryId, isActive: true })
+      .populate('category', 'name')
+      .sort({ name: 1 });
+  },
+
+  /* ---------------------------
+   *  SALES METHOD OPERATIONS
+   * -------------------------*/
+  async getSalesMethods(categoryId?: string) {
+    const query: any = { isActive: true };
+    if (categoryId) query.category = categoryId;
+    return await SalesMethod.find(query)
+      .populate('category', 'name')
+      .sort({ name: 1 });
+  },
+
+  async createSalesMethod(data: { name: string; description?: string; category: string }) {
     return await SalesMethod.create(data);
   },
 
-  async updateSalesMethod(id: string, data: { name?: string; description?: string; parent?: string }) {
-    return await SalesMethod.findByIdAndUpdate(id, data, { new: true }).populate('parent', 'name');
+  async updateSalesMethod(id: string, data: { name?: string; description?: string; category?: string; isActive?: boolean }) {
+    return await SalesMethod.findByIdAndUpdate(id, data, { new: true })
+      .populate('category', 'name');
   },
 
   async deleteSalesMethod(id: string) {
-    // Önce alt kategorileri kontrol et
-    const children = await SalesMethod.find({ parent: id });
-    if (children.length > 0) {
-      throw new Error('Bu satış yönteminin alt kategorileri bulunmaktadır. Önce alt kategorileri siliniz.');
+    // Şubeye atanmış mı kontrol et
+    const branchAssignment = await BranchSalesMethod.findOne({ salesMethod: id });
+    if (branchAssignment) {
+      throw new Error('Bu satış yöntemi bir veya daha fazla şubeye atanmış. Önce şubelerden çıkarınız.');
     }
     return await SalesMethod.findByIdAndDelete(id);
   },
 
   async getSalesMethodById(id: string) {
-    return await SalesMethod.findById(id).populate('parent', 'name');
+    return await SalesMethod.findById(id).populate('category', 'name');
+  },
+
+  /* ---------------------------
+   *  BRANCH SALES METHOD OPERATIONS (BULK)
+   * -------------------------*/
+  async assignSalesMethodsToBranch(data: {
+    branch: string;
+    salesMethods: string[]; // Array of sales method IDs
+  }) {
+    const results = [];
+    const errors = [];
+
+    for (const salesMethodId of data.salesMethods) {
+      try {
+        const exists = await BranchSalesMethod.findOne({
+          branch: data.branch,
+          salesMethod: salesMethodId
+        });
+
+        if (!exists) {
+          const assignment = await BranchSalesMethod.create({
+            branch: data.branch,
+            salesMethod: salesMethodId
+          });
+          results.push(assignment);
+        }
+      } catch (error: any) {
+        errors.push({ salesMethodId, error: error.message });
+      }
+    }
+
+    return { results, errors };
   },
 
   /* ---------------------------
