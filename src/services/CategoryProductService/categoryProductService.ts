@@ -465,7 +465,7 @@ export const CategoryProductService = {
    *  SALES METHOD CATEGORY OPERATIONS
    * -------------------------*/
   async getSalesMethodCategories() {
-    return await SalesMethodCategory.find({ isActive: true }).sort({ name: 1 });
+    return await SalesMethodCategory.find().sort({ name: 1 });
   },
 
   async getSalesMethodCategoryById(id: string) {
