@@ -12,6 +12,7 @@ import { BranchSalesMethod } from "./models/branchSalesMethod";
 import { SalesMethod } from "./models/salesMethod";
 import { AmountUnit } from "./models/amountUnit";
 import { CurrencyUnit } from "./models/currencyUnit";
+import { Branch } from "../CompanyBranchService/models/branch";
 
 export const CategoryProductService = {
   /* ---------------------------
@@ -160,6 +161,15 @@ export const CategoryProductService = {
     company: string; 
     branch: string; 
   }) {
+    // Şube-şirket uyum kontrolü
+    const branch = await Branch.findById(data.branch);
+    if (!branch) {
+      throw new Error("Şube bulunamadı");
+    }
+    if (branch.company.toString() !== data.company) {
+      throw new Error("Seçilen şube, belirtilen şirkete ait değil");
+    }
+    
     return await Kitchen.create(data);
   },
 
@@ -257,6 +267,19 @@ export const CategoryProductService = {
     branch: string;
     company?: string;
   }) {
+    // Şube-şirket uyum kontrolü
+    const branch = await Branch.findById(data.branch);
+    if (!branch) {
+      throw new Error("Şube bulunamadı");
+    }
+    
+    // Eğer company belirtilmişse, şube ile uyumlu olmalı
+    if (data.company && data.company.trim() !== '') {
+      if (branch.company.toString() !== data.company) {
+        throw new Error("Seçilen şube, belirtilen şirkete ait değil");
+      }
+    }
+    
     // Aynı ürün + satış yöntemi + şube kombinasyonu kontrolü
     const existing = await ProductPrice.findOne({
       product: data.product,
@@ -277,7 +300,10 @@ export const CategoryProductService = {
       branch: data.branch
     };
     
-    if (data.company && data.company.trim() !== '') {
+    // Company bilgisini şube'den al (belirtilmemişse)
+    if (!data.company || data.company.trim() === '') {
+      cleanData.company = branch.company;
+    } else {
       cleanData.company = data.company;
     }
     
@@ -315,6 +341,27 @@ export const CategoryProductService = {
     currencyUnit?: string;
     branch?: string;
   }) {
+    // Eğer branch değiştiriliyorsa, şube-company uyum kontrolü
+    if (data.branch !== undefined && data.branch.trim() !== '') {
+      const branch = await Branch.findById(data.branch);
+      if (!branch) {
+        throw new Error("Şube bulunamadı");
+      }
+      
+      // Mevcut fiyat kaydını al
+      const existingPrice = await ProductPrice.findById(id);
+      if (!existingPrice) {
+        throw new Error("Fiyat kaydı bulunamadı");
+      }
+      
+      // Eğer company belirtilmişse, şube ile uyumlu olmalı
+      if (existingPrice.company) {
+        if (branch.company.toString() !== existingPrice.company.toString()) {
+          throw new Error("Seçilen şube, fiyatın şirketine ait değil");
+        }
+      }
+    }
+    
     const update: any = {};
     if (data.salesMethod) update.salesMethod = data.salesMethod;
     if (typeof data.price === 'number') update.price = data.price;
@@ -509,6 +556,21 @@ export const CategoryProductService = {
     menu: string; 
     branch: string; 
   }) {
+    // Menü-şube şirket uyum kontrolü
+    const menu = await Menu.findById(data.menu);
+    const branch = await Branch.findById(data.branch);
+    
+    if (!menu) {
+      throw new Error("Menü bulunamadı");
+    }
+    if (!branch) {
+      throw new Error("Şube bulunamadı");
+    }
+    
+    if (menu.company.toString() !== branch.company.toString()) {
+      throw new Error("Seçilen menü ve şube aynı şirkete ait değil");
+    }
+    
     const exists = await MenuBranch.findOne({
       menu: data.menu,
       branch: data.branch
@@ -682,6 +744,27 @@ export const CategoryProductService = {
     kitchen: string; 
     branch: string; 
   }) {
+    // Mutfak-şube şirket uyum kontrolü
+    const kitchen = await Kitchen.findById(data.kitchen);
+    const branch = await Branch.findById(data.branch);
+    
+    if (!kitchen) {
+      throw new Error("Mutfak bulunamadı");
+    }
+    if (!branch) {
+      throw new Error("Şube bulunamadı");
+    }
+    
+    // Mutfak ve şube aynı şirkete ait olmalı
+    if (kitchen.company.toString() !== branch.company.toString()) {
+      throw new Error("Seçilen mutfak ve şube aynı şirkete ait değil");
+    }
+    
+    // Mutfak ve şube eşleşmeli
+    if (kitchen.branch.toString() !== branch._id.toString()) {
+      throw new Error("Seçilen mutfak, belirtilen şubeye ait değil");
+    }
+    
     const exists = await ProductKitchen.findOne({
       product: data.product,
       kitchen: data.kitchen,
