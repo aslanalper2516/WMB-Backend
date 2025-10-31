@@ -242,7 +242,7 @@ export const CategoryProductService = {
   },
 
   async getIngredientCategories(companyId?: string) {
-    const query: any = { isActive: true };
+    const query: any = {};
     if (companyId) query.company = companyId;
     return await IngredientCategory.find(query)
       .populate("company")
@@ -343,7 +343,7 @@ export const CategoryProductService = {
   },
 
   async getIngredients(companyId?: string, categoryId?: string) {
-    const query: any = { isActive: true };
+    const query: any = {};
     if (companyId) query.company = companyId;
     if (categoryId) query.category = categoryId;
     return await Ingredient.find(query)
