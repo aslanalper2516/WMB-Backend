@@ -499,7 +499,7 @@ export const CategoryProductService = {
    *  SALES METHOD OPERATIONS
    * -------------------------*/
   async getSalesMethods(categoryId?: string) {
-    const query: any = { isActive: true };
+    const query: any = {};
     if (categoryId) query.category = categoryId;
     return await SalesMethod.find(query)
       .populate('category', 'name')
