@@ -324,50 +324,46 @@ categoryProductRoutes.delete(
 );
 
 /* ============================================================
- *  PRODUCT INGREDIENTS ROUTES
+ *  INGREDIENT ROUTES
  * ============================================================*/
 
 /**
- * 📍 GET /products/:id/ingredients
- * Ürün malzemelerini listeler.
+ * 📍 GET /ingredients
+ * Malzemeleri listeler.
  * Sadece "malzeme listeleme" iznine sahip kullanıcılar erişebilir.
+ * Query param: ?company=companyId
  */
 categoryProductRoutes.get(
-  "/products/:id/ingredients",
+  "/ingredients",
   authMiddleware,
   permissionMiddleware("malzeme listeleme"),
   async (c) => {
-    const { id } = c.req.param();
-    const ingredients = await CategoryProductService.getProductIngredients(id);
-    return c.json({ message: "Product ingredients retrieved successfully", ingredients });
+    const companyId = c.req.query("company");
+    const ingredients = await CategoryProductService.getIngredients(companyId || undefined);
+    return c.json({ message: "Ingredients retrieved successfully", ingredients });
   }
 );
 
 /**
- * 📍 POST /products/:id/ingredients
- * Ürün malzemesi ekler.
+ * 📍 POST /ingredients
+ * Yeni malzeme oluşturur.
  * Sadece "malzeme oluşturma" iznine sahip kullanıcılar erişebilir.
  */
 categoryProductRoutes.post(
-  "/products/:id/ingredients",
+  "/ingredients",
   authMiddleware,
   permissionMiddleware("malzeme oluşturma"),
   async (c) => {
-    const { id } = c.req.param();
     const body = await c.req.json();
     const schema = z.object({
       name: z.string().min(1),
-      amount: z.number(),
-      amountUnit: z.string(),
-      price: z.number().default(0),
-      priceUnit: z.string(),
-      isDefault: z.boolean().default(false),
+      description: z.string().optional(),
+      company: z.string(),
     });
     const input = schema.parse(body);
-    const ingredientData = { ...input, product: id };
 
-    const ingredient = await CategoryProductService.createProductIngredient(ingredientData);
-    return c.json({ message: "Product ingredient created successfully", ingredient });
+    const ingredient = await CategoryProductService.createIngredient(input);
+    return c.json({ message: "Ingredient created successfully", ingredient });
   }
 );
 
@@ -401,11 +397,9 @@ categoryProductRoutes.put(
     const body = await c.req.json();
     const schema = z.object({
       name: z.string().optional(),
-      amount: z.number().optional(),
-      amountUnit: z.string().optional(),
-      price: z.number().optional(),
-      priceUnit: z.string().optional(),
-      isDefault: z.boolean().optional(),
+      description: z.string().optional(),
+      isActive: z.boolean().optional(),
+      company: z.string().optional(),
     });
     const input = schema.parse(body);
 
@@ -427,6 +421,119 @@ categoryProductRoutes.delete(
     const { id } = c.req.param();
     await CategoryProductService.deleteIngredient(id);
     return c.json({ message: "Ingredient deleted successfully" });
+  }
+);
+
+/* ============================================================
+ *  PRODUCT INGREDIENTS ROUTES
+ * ============================================================*/
+
+/**
+ * 📍 GET /products/:id/ingredients
+ * Ürün malzemelerini listeler.
+ * Sadece "malzeme listeleme" iznine sahip kullanıcılar erişebilir.
+ * Query param: ?branch=branchId
+ */
+categoryProductRoutes.get(
+  "/products/:id/ingredients",
+  authMiddleware,
+  permissionMiddleware("malzeme listeleme"),
+  async (c) => {
+    const { id } = c.req.param();
+    const branchId = c.req.query("branch");
+    const ingredients = await CategoryProductService.getProductIngredients(id, branchId || undefined);
+    return c.json({ message: "Product ingredients retrieved successfully", ingredients });
+  }
+);
+
+/**
+ * 📍 POST /products/:id/ingredients
+ * Ürün malzemesi ekler.
+ * Sadece "malzeme oluşturma" iznine sahip kullanıcılar erişebilir.
+ */
+categoryProductRoutes.post(
+  "/products/:id/ingredients",
+  authMiddleware,
+  permissionMiddleware("malzeme oluşturma"),
+  async (c) => {
+    const { id } = c.req.param();
+    const body = await c.req.json();
+    const schema = z.object({
+      ingredient: z.string(),
+      company: z.string(),
+      branch: z.string(),
+      amount: z.number(),
+      amountUnit: z.string(),
+      price: z.number().default(0),
+      priceUnit: z.string(),
+      isDefault: z.boolean().default(false),
+    });
+    const input = schema.parse(body);
+    const ingredientData = { ...input, product: id };
+
+    const ingredient = await CategoryProductService.createProductIngredient(ingredientData);
+    return c.json({ message: "Product ingredient created successfully", ingredient });
+  }
+);
+
+/**
+ * 📍 GET /product-ingredients/:id
+ * Ürün malzemesi detayını getirir.
+ * Sadece "malzeme listeleme" iznine sahip kullanıcılar erişebilir.
+ */
+categoryProductRoutes.get(
+  "/product-ingredients/:id",
+  authMiddleware,
+  permissionMiddleware("malzeme listeleme"),
+  async (c) => {
+    const { id } = c.req.param();
+    const ingredient = await CategoryProductService.getProductIngredientById(id);
+    return c.json({ message: "Product ingredient retrieved successfully", ingredient });
+  }
+);
+
+/**
+ * 📍 PUT /product-ingredients/:id
+ * Ürün malzemesi bilgilerini günceller.
+ * Sadece "malzeme güncelleme" iznine sahip kullanıcılar erişebilir.
+ */
+categoryProductRoutes.put(
+  "/product-ingredients/:id",
+  authMiddleware,
+  permissionMiddleware("malzeme güncelleme"),
+  async (c) => {
+    const { id } = c.req.param();
+    const body = await c.req.json();
+    const schema = z.object({
+      ingredient: z.string().optional(),
+      amount: z.number().optional(),
+      amountUnit: z.string().optional(),
+      price: z.number().optional(),
+      priceUnit: z.string().optional(),
+      isDefault: z.boolean().optional(),
+      branch: z.string().optional(),
+      company: z.string().optional(),
+    });
+    const input = schema.parse(body);
+
+    const ingredient = await CategoryProductService.updateProductIngredient(id, input);
+    return c.json({ message: "Product ingredient updated successfully", ingredient });
+  }
+);
+
+/**
+ * 📍 DELETE /product-ingredients/:id
+ * Ürün malzemesini siler.
+ * Sadece "malzeme silme" iznine sahip kullanıcılar erişebilir.
+ */
+categoryProductRoutes.delete(
+  "/product-ingredients/:id",
+  authMiddleware,
+  permissionMiddleware("malzeme silme"),
+  async (c) => {
+    const { id } = c.req.param();
+    await CategoryProductService.deleteProductIngredient(id);
+    return c.json({ message: "Product ingredient deleted successfully" });
   }
 );
 

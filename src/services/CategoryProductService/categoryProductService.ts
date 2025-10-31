@@ -7,6 +7,7 @@ import { MenuCategory } from "./models/menuCategory";
 import { MenuProduct } from "./models/menuProduct";
 import { ProductKitchen } from "./models/productKitchen";
 import { ProductIngredients } from "./models/productIngredients";
+import { Ingredient } from "./models/ingredient";
 import { ProductPrice } from "./models/productPrice";
 import { BranchSalesMethod } from "./models/branchSalesMethod";
 import { SalesMethod } from "./models/salesMethod";
@@ -14,6 +15,7 @@ import { SalesMethodCategory } from "./models/salesMethodCategory";
 import { AmountUnit } from "./models/amountUnit";
 import { CurrencyUnit } from "./models/currencyUnit";
 import { Branch } from "../CompanyBranchService/models/branch";
+import { Company } from "../CompanyBranchService/models/company";
 
 export const CategoryProductService = {
   /* ---------------------------
@@ -211,49 +213,239 @@ export const CategoryProductService = {
   },
 
   /* ---------------------------
+   *  INGREDIENT OPERATIONS
+   * -------------------------*/
+  async createIngredient(data: { 
+    name: string; 
+    description?: string;
+    company: string; 
+  }) {
+    // Şirket kontrolü
+    const company = await Company.findById(data.company);
+    if (!company) {
+      throw new Error("Şirket bulunamadı");
+    }
+    if (company.isDeleted) {
+      throw new Error("Şirket silinmiş durumda");
+    }
+    
+    const cleanData: any = {
+      name: data.name,
+      company: data.company
+    };
+    if (data.description && data.description.trim() !== '') {
+      cleanData.description = data.description;
+    }
+    
+    return await Ingredient.create(cleanData);
+  },
+
+  async getIngredients(companyId?: string) {
+    const query: any = { isActive: true };
+    if (companyId) query.company = companyId;
+    return await Ingredient.find(query)
+      .populate("company")
+      .sort({ name: 1 });
+  },
+
+  async getIngredientById(id: string) {
+    return await Ingredient.findById(id)
+      .populate("company");
+  },
+
+  async updateIngredient(id: string, data: { 
+    name?: string; 
+    description?: string;
+    isActive?: boolean;
+    company?: string;
+  }) {
+    // Eğer company değiştiriliyorsa, şirket kontrolü
+    if (data.company) {
+      const company = await Company.findById(data.company);
+      if (!company) {
+        throw new Error("Şirket bulunamadı");
+      }
+      if (company.isDeleted) {
+        throw new Error("Şirket silinmiş durumda");
+      }
+    }
+    
+    const cleanData: any = {};
+    if (data.name !== undefined) cleanData.name = data.name;
+    if (data.isActive !== undefined) cleanData.isActive = data.isActive;
+    if (data.company !== undefined) cleanData.company = data.company;
+    if (data.description !== undefined) {
+      if (data.description && data.description.trim() !== '') {
+        cleanData.description = data.description;
+      } else {
+        cleanData.description = undefined;
+      }
+    }
+    
+    return await Ingredient.findByIdAndUpdate(id, cleanData, { new: true })
+      .populate("company");
+  },
+
+  async deleteIngredient(id: string) {
+    // Bu malzemenin kullanıldığı productIngredients kayıtlarını kontrol et
+    const productIngredients = await ProductIngredients.find({ ingredient: id });
+    if (productIngredients.length > 0) {
+      throw new Error('Bu malzeme bir veya daha fazla üründe kullanılıyor. Önce ürünlerden çıkarınız.');
+    }
+    return await Ingredient.findByIdAndDelete(id);
+  },
+
+  /* ---------------------------
    *  PRODUCT INGREDIENTS OPERATIONS
    * -------------------------*/
   async createProductIngredient(data: { 
-    name: string; 
+    ingredient: string; 
     product: string; 
+    company: string;
+    branch: string;
     amount: number; 
     amountUnit: string; 
     price: number; 
     priceUnit: string; 
     isDefault: boolean; 
   }) {
+    // Şirket kontrolü
+    const company = await Company.findById(data.company);
+    if (!company) {
+      throw new Error("Şirket bulunamadı");
+    }
+    if (company.isDeleted) {
+      throw new Error("Şirket silinmiş durumda");
+    }
+    
+    // Şube kontrolü
+    const branch = await Branch.findById(data.branch);
+    if (!branch) {
+      throw new Error("Şube bulunamadı");
+    }
+    if (branch.isDeleted) {
+      throw new Error("Şube silinmiş durumda");
+    }
+    if (branch.company.toString() !== data.company) {
+      throw new Error("Seçilen şube, belirtilen şirkete ait değil");
+    }
+    
+    // Malzeme kontrolü
+    const ingredient = await Ingredient.findById(data.ingredient);
+    if (!ingredient) {
+      throw new Error("Malzeme bulunamadı");
+    }
+    if (!ingredient.isActive) {
+      throw new Error("Malzeme aktif değil");
+    }
+    if (ingredient.company.toString() !== data.company) {
+      throw new Error("Seçilen malzeme, belirtilen şirkete ait değil");
+    }
+    
+    // Ürün kontrolü
+    const product = await Product.findById(data.product);
+    if (!product) {
+      throw new Error("Ürün bulunamadı");
+    }
+    if (product.company.toString() !== data.company) {
+      throw new Error("Seçilen ürün, belirtilen şirkete ait değil");
+    }
+    
     return await ProductIngredients.create(data);
   },
 
-  async getProductIngredients(productId: string) {
-    return await ProductIngredients.find({ product: productId })
+  async getProductIngredients(productId: string, branchId?: string) {
+    const query: any = { product: productId };
+    if (branchId) query.branch = branchId;
+    
+    return await ProductIngredients.find(query)
+      .populate("ingredient")
+      .populate("product")
+      .populate("company")
+      .populate("branch")
       .populate("amountUnit")
       .populate("priceUnit")
-      .sort({ name: 1 });
+      .sort({ createdAt: 1 });
   },
 
-  async getIngredientById(id: string) {
+  async getProductIngredientById(id: string) {
     return await ProductIngredients.findById(id)
+      .populate("ingredient")
       .populate("product")
+      .populate("company")
+      .populate("branch")
       .populate("amountUnit")
       .populate("priceUnit");
   },
 
-  async updateIngredient(id: string, data: { 
-    name?: string; 
+  async updateProductIngredient(id: string, data: { 
+    ingredient?: string; 
     amount?: number; 
     amountUnit?: string; 
     price?: number; 
     priceUnit?: string; 
-    isDefault?: boolean; 
+    isDefault?: boolean;
+    branch?: string;
+    company?: string;
   }) {
+    const existing = await ProductIngredients.findById(id);
+    if (!existing) {
+      throw new Error("Ürün malzemesi bulunamadı");
+    }
+    
+    // Eğer company değiştiriliyorsa, şirket kontrolü
+    if (data.company) {
+      const company = await Company.findById(data.company);
+      if (!company) {
+        throw new Error("Şirket bulunamadı");
+      }
+      if (company.isDeleted) {
+        throw new Error("Şirket silinmiş durumda");
+      }
+    }
+    
+    // Eğer branch değiştiriliyorsa, şube kontrolü
+    if (data.branch) {
+      const branch = await Branch.findById(data.branch);
+      if (!branch) {
+        throw new Error("Şube bulunamadı");
+      }
+      if (branch.isDeleted) {
+        throw new Error("Şube silinmiş durumda");
+      }
+      
+      const companyId = data.company || existing.company;
+      if (branch.company.toString() !== companyId.toString()) {
+        throw new Error("Seçilen şube, belirtilen şirkete ait değil");
+      }
+    }
+    
+    // Eğer ingredient değiştiriliyorsa, malzeme kontrolü
+    if (data.ingredient) {
+      const ingredient = await Ingredient.findById(data.ingredient);
+      if (!ingredient) {
+        throw new Error("Malzeme bulunamadı");
+      }
+      if (!ingredient.isActive) {
+        throw new Error("Malzeme aktif değil");
+      }
+      
+      const companyId = data.company || existing.company;
+      if (ingredient.company.toString() !== companyId.toString()) {
+        throw new Error("Seçilen malzeme, belirtilen şirkete ait değil");
+      }
+    }
+    
     return await ProductIngredients.findByIdAndUpdate(id, data, { new: true })
+      .populate("ingredient")
       .populate("product")
+      .populate("company")
+      .populate("branch")
       .populate("amountUnit")
       .populate("priceUnit");
   },
 
-  async deleteIngredient(id: string) {
+  async deleteProductIngredient(id: string) {
     return await ProductIngredients.findByIdAndDelete(id);
   },
 
