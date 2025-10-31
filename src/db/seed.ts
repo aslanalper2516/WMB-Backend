@@ -135,6 +135,8 @@ async function seedDatabase() {
     console.log("✅ Super-admin role created.");
 
     // 3️⃣ User oluştur
+    // Not: User modelinde company ve branch alanları yoktur.
+    // Bu ilişkiler UserCompanyBranch tablosunda tanımlanır.
     console.log("👤 Creating user...");
     const hashedPassword = await bcrypt.hash("240911Mf..", 12);
     const user = await User.findOneAndUpdate(
@@ -150,6 +152,8 @@ async function seedDatabase() {
     console.log("✅ User created.");
 
     // 4️⃣ Company oluştur
+    // Not: Company modelinde manager, managerEmail, managerPhone alanları yoktur.
+    // Yönetici ilişkileri UserCompanyBranch tablosunda tanımlanır.
     console.log("🏢 Creating company...");
     const company = await Company.findOneAndUpdate(
       { name: "WMB Yazılım" },
@@ -168,6 +172,8 @@ async function seedDatabase() {
     console.log("✅ Company created.");
 
     // 5️⃣ Branch oluştur
+    // Not: Branch modelinde manager, managerEmail, managerPhone alanları yoktur.
+    // Yönetici ilişkileri UserCompanyBranch tablosunda tanımlanır.
     console.log("🏪 Creating branch...");
     const branch = await Branch.findOneAndUpdate(
       { name: "Kağıthane Şubesi" },
@@ -188,7 +194,11 @@ async function seedDatabase() {
     console.log("✅ Branch created.");
 
     // 5.5️⃣ UserCompanyBranch ilişkisi oluştur
+    // User-Company-Branch ilişkileri bu tabloda tanımlanır.
+    // Bir kullanıcı birden fazla şirket/şubeye atanabilir ve yönetici olabilir.
     console.log("🔗 Creating user-company-branch relationship...");
+    
+    // Kullanıcıyı şube yöneticisi olarak ata
     await UserCompanyBranch.findOneAndUpdate(
       {
         user: user._id,
@@ -206,7 +216,7 @@ async function seedDatabase() {
       { upsert: true, new: true }
     );
     
-    // Şirket yöneticisi olarak da ekle
+    // Kullanıcıyı şirket yöneticisi olarak da ata (branch: null ile)
     await UserCompanyBranch.findOneAndUpdate(
       {
         user: user._id,
