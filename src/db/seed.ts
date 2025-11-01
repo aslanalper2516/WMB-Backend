@@ -7,7 +7,6 @@ import { Permission } from "../services/RolePermissionService/models/permission"
 import { RolePermission } from "../services/RolePermissionService/models/rolePermission";
 import { Company } from "../services/CompanyBranchService/models/company";
 import { Branch } from "../services/CompanyBranchService/models/branch";
-import { UserCompanyBranch } from "../services/CompanyBranchService/models/userCompanyBranch";
 import { SalesMethod } from "../services/CategoryProductService/models/salesMethod";
 
 dotenv.config();
@@ -134,6 +133,44 @@ async function seedDatabase() {
     );
     console.log("✅ Super-admin role created.");
 
+    // 2.5️⃣ Diğer roller oluştur (şirket yöneticisi, şube yöneticisi, garson)
+    console.log("👥 Creating additional roles...");
+    const companyManagerRole = await Role.findOneAndUpdate(
+      { name: "şirket-yöneticisi" },
+      {
+        name: "şirket-yöneticisi",
+        scope: "GLOBAL",
+        branch: null,
+        permissions: []
+      },
+      { upsert: true, new: true }
+    );
+    console.log("✅ Company manager role created.");
+
+    const branchManagerRole = await Role.findOneAndUpdate(
+      { name: "şube-yöneticisi" },
+      {
+        name: "şube-yöneticisi",
+        scope: "GLOBAL",
+        branch: null,
+        permissions: []
+      },
+      { upsert: true, new: true }
+    );
+    console.log("✅ Branch manager role created.");
+
+    const waiterRole = await Role.findOneAndUpdate(
+      { name: "garson" },
+      {
+        name: "garson",
+        scope: "GLOBAL",
+        branch: null,
+        permissions: []
+      },
+      { upsert: true, new: true }
+    );
+    console.log("✅ Waiter role created.");
+
     // 3️⃣ User oluştur
     // Not: User modelinde company ve branch alanları yoktur.
     // Bu ilişkiler UserCompanyBranch tablosunda tanımlanır.
@@ -153,7 +190,8 @@ async function seedDatabase() {
 
     // 4️⃣ Company oluştur
     // Not: Company modelinde manager, managerEmail, managerPhone alanları yoktur.
-    // Yönetici ilişkileri UserCompanyBranch tablosunda tanımlanır.
+    // Not: Yönetici bilgisi User modelindeki role alanında tutulur.
+    //      UserCompanyBranch tablosu sadece kullanıcı-şirket-şube ilişkilerini tutar.
     console.log("🏢 Creating company...");
     const company = await Company.findOneAndUpdate(
       { name: "WMB Yazılım" },
@@ -173,7 +211,8 @@ async function seedDatabase() {
 
     // 5️⃣ Branch oluştur
     // Not: Branch modelinde manager, managerEmail, managerPhone alanları yoktur.
-    // Yönetici ilişkileri UserCompanyBranch tablosunda tanımlanır.
+    // Not: Yönetici bilgisi User modelindeki role alanında tutulur.
+    //      UserCompanyBranch tablosu sadece kullanıcı-şirket-şube ilişkilerini tutar.
     console.log("🏪 Creating branch...");
     const branch = await Branch.findOneAndUpdate(
       { name: "Kağıthane Şubesi" },
@@ -194,46 +233,9 @@ async function seedDatabase() {
     console.log("✅ Branch created.");
 
     // 5.5️⃣ UserCompanyBranch ilişkisi oluştur
-    // User-Company-Branch ilişkileri bu tabloda tanımlanır.
-    // Bir kullanıcı birden fazla şirket/şubeye atanabilir ve yönetici olabilir.
-    console.log("🔗 Creating user-company-branch relationship...");
-    
-    // Kullanıcıyı şube yöneticisi olarak ata
-    await UserCompanyBranch.findOneAndUpdate(
-      {
-        user: user._id,
-        company: company._id,
-        branch: branch._id
-      },
-      {
-        user: user._id,
-        company: company._id,
-        branch: branch._id,
-        isManager: true,
-        managerType: "branch",
-        isActive: true
-      },
-      { upsert: true, new: true }
-    );
-    
-    // Kullanıcıyı şirket yöneticisi olarak da ata (branch: null ile)
-    await UserCompanyBranch.findOneAndUpdate(
-      {
-        user: user._id,
-        company: company._id,
-        branch: null
-      },
-      {
-        user: user._id,
-        company: company._id,
-        branch: null,
-        isManager: true,
-        managerType: "company",
-        isActive: true
-      },
-      { upsert: true, new: true }
-    );
-    console.log("✅ User-company-branch relationships created.");
+    // Not: Super-admin rolüne sahip kullanıcılar şirket/şubeye atanamaz.
+    //      Bu yüzden seed dosyasında super-admin rolüne sahip kullanıcıya şirket/şube ataması yapılmaz.
+    console.log("ℹ️ Skipping user-company-branch relationship for super-admin user.");
 
     // 6️⃣ RolePermission ilişkilerini oluştur
     console.log("🔗 Creating role-permission relationships...");
@@ -365,11 +367,11 @@ async function seedDatabase() {
     console.log("\n🎉 Database seeding completed successfully!");
     console.log("📊 Summary:");
     console.log(`   - ${createdPermissions.length} permissions created`);
-    console.log(`   - 1 super-admin role created`);
+    console.log(`   - 4 roles created (super-admin, şirket-yöneticisi, şube-yöneticisi, garson)`);
     console.log(`   - 1 company created (WMB Yazılım)`);
-    console.log(`   - 1 user created (Alper Aslan)`);
+    console.log(`   - 1 user created (Alper Aslan) - Super-admin role assigned`);
     console.log(`   - 1 branch created (Kağıthane Şubesi)`);
-    console.log(`   - 2 user-company-branch relationships created`);
+    console.log(`   - 0 user-company-branch relationships created (super-admin cannot be assigned to companies)`);
     console.log(`   - ${createdPermissions.length} role-permission relationships created`);
     console.log(`   - 3 main sales methods and 6 sub-sales methods created`);
     

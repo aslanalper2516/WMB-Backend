@@ -376,8 +376,6 @@ companyBranchRoutes.post(
       user: z.string(),
       company: z.string(),
       branch: z.string().optional(),
-      isManager: z.boolean().optional(),
-      managerType: z.enum(["company", "branch"]).optional(),
     });
     const input = schema.parse(body);
 
@@ -440,13 +438,17 @@ companyBranchRoutes.put(
     const body = await c.req.json();
     const schema = z.object({
       branch: z.string().nullable().optional(),
-      isManager: z.boolean().optional(),
-      managerType: z.enum(["company", "branch"]).optional(),
       isActive: z.boolean().optional(),
     });
     const input = schema.parse(body);
+    
+    // branch null ise undefined'a çevir
+    const updateData = {
+      ...input,
+      branch: input.branch === null ? undefined : input.branch
+    };
 
-    const assignment = await CompanyBranchService.updateUserCompanyBranch(id, input);
+    const assignment = await CompanyBranchService.updateUserCompanyBranch(id, updateData);
     return c.json({ message: "User company branch assignment updated successfully", assignment });
   }
 );
@@ -498,6 +500,38 @@ companyBranchRoutes.get(
     const branchId = c.req.query("branch");
     const assignments = await CompanyBranchService.getCompanyUsers(id, branchId || undefined);
     return c.json({ message: "Company users retrieved successfully", assignments });
+  }
+);
+
+/**
+ * 📍 GET /companies/:id/managers
+ * Belirli bir şirketin yöneticilerini listeler (rolü "şirket-yöneticisi" olan ve bu şirkete atanmış kullanıcılar).
+ * Sadece "kullanıcı listeleme" iznine sahip kullanıcılar erişebilir.
+ */
+companyBranchRoutes.get(
+  "/companies/:id/managers",
+  authMiddleware,
+  permissionMiddleware("kullanıcı listeleme"),
+  async (c) => {
+    const { id } = c.req.param();
+    const managers = await CompanyBranchService.getCompanyManagers(id);
+    return c.json({ message: "Company managers retrieved successfully", managers });
+  }
+);
+
+/**
+ * 📍 GET /branches/:id/managers
+ * Belirli bir şubenin yöneticilerini listeler (rolü "şube-yöneticisi" olan ve bu şubeye atanmış kullanıcılar).
+ * Sadece "kullanıcı listeleme" iznine sahip kullanıcılar erişebilir.
+ */
+companyBranchRoutes.get(
+  "/branches/:id/managers",
+  authMiddleware,
+  permissionMiddleware("kullanıcı listeleme"),
+  async (c) => {
+    const { id } = c.req.param();
+    const managers = await CompanyBranchService.getBranchManagers(id);
+    return c.json({ message: "Branch managers retrieved successfully", managers });
   }
 );
 

@@ -208,13 +208,22 @@ export class CompanyBranchService {
     user: string;
     company: string;
     branch?: string;
-    isManager?: boolean;
-    managerType?: "company" | "branch";
   }) {
     // Kullanıcı kontrolü
-    const user = await User.findById(data.user);
+    const user = await User.findById(data.user).populate("role");
     if (!user) {
       throw new Error("Kullanıcı bulunamadı");
+    }
+
+    // Super-admin rolüne sahip kullanıcılar şirket/şubeye atanamaz
+    if (user.role) {
+      const role = typeof user.role === 'string' ? null : user.role;
+      if (role && role.name) {
+        const roleName = role.name.toLowerCase().trim();
+        if (roleName === 'super-admin' || roleName === 'super admin') {
+          throw new Error("Super-admin rolüne sahip kullanıcılar şirket veya şubeye atanamaz.");
+        }
+      }
     }
 
     // Şirket kontrolü
@@ -224,6 +233,38 @@ export class CompanyBranchService {
     }
     if (company.isDeleted) {
       throw new Error("Şirket silinmiş durumda");
+    }
+
+    // Kullanıcının aktif olan başka bir şirkete atanıp atanmadığını kontrol et
+    const existingAssignments = await UserCompanyBranch.find({
+      user: data.user,
+      isActive: true
+    }).populate("company");
+
+    // Kullanıcı zaten başka bir şirkete atanmış mı?
+    const hasOtherCompany = existingAssignments.some((assignment: any) => {
+      const assignmentCompany = assignment.company;
+      const companyId = typeof assignmentCompany === 'string' 
+        ? assignmentCompany 
+        : assignmentCompany._id.toString();
+      return companyId !== data.company;
+    });
+
+    if (hasOtherCompany) {
+      throw new Error("Bu kullanıcı zaten başka bir şirkete atanmış. Bir kullanıcı sadece bir şirkete ait olabilir.");
+    }
+
+    // Şirket-yöneticisi rolüne sahip kullanıcılar şubeye atanamaz (sadece şirket seviyesinde atanabilir)
+    if (user.role) {
+      const role = typeof user.role === 'string' ? null : user.role;
+      if (role && role.name) {
+        const roleName = role.name.toLowerCase().trim();
+        if ((roleName === 'şirket-yöneticisi' || roleName === 'şirket yöneticisi' || 
+             roleName === 'sirket-yoneticisi' || roleName === 'sirket yoneticisi') && 
+            data.branch) {
+          throw new Error("Şirket yöneticisi rolüne sahip kullanıcılar şubeye atanamaz. Sadece şirket seviyesinde atanabilirler.");
+        }
+      }
     }
 
     // Eğer branch belirtilmişse, branch kontrolü
@@ -237,16 +278,6 @@ export class CompanyBranchService {
       }
       if (branch.company.toString() !== data.company) {
         throw new Error("Seçilen şube, belirtilen şirkete ait değil");
-      }
-
-      // managerType kontrolü
-      if (data.isManager && data.managerType === "branch" && !data.branch) {
-        throw new Error("Şube yöneticisi için şube belirtilmesi gerekiyor");
-      }
-    } else {
-      // Branch belirtilmemişse sadece company yöneticisi olabilir
-      if (data.isManager && data.managerType !== "company") {
-        throw new Error("Şirket seviyesinde atama için managerType 'company' olmalı");
       }
     }
 
@@ -286,8 +317,6 @@ export class CompanyBranchService {
 
   static async updateUserCompanyBranch(id: string, data: {
     branch?: string;
-    isManager?: boolean;
-    managerType?: "company" | "branch";
     isActive?: boolean;
   }) {
     const existing = await UserCompanyBranch.findById(id);
@@ -307,16 +336,6 @@ export class CompanyBranchService {
         }
         if (branch.company.toString() !== existing.company.toString()) {
           throw new Error("Seçilen şube, kullanıcının şirketine ait değil");
-        }
-
-        // managerType kontrolü
-        if (data.isManager && data.managerType === "branch" && !data.branch) {
-          throw new Error("Şube yöneticisi için şube belirtilmesi gerekiyor");
-        }
-      } else {
-        // Branch null yapılıyorsa, sadece company seviyesinde olmalı
-        if (data.isManager && data.managerType !== "company") {
-          throw new Error("Şirket seviyesinde atama için managerType 'company' olmalı");
         }
       }
 
@@ -358,5 +377,85 @@ export class CompanyBranchService {
       .populate("user")
       .populate("branch")
       .sort({ createdAt: -1 });
+  }
+
+  /* ---------------------------
+   *  MANAGER OPERATIONS
+   * -------------------------*/
+
+  /**
+   * Şirket yöneticilerini getirir
+   * Rolü "şirket-yöneticisi" olan ve bu şirkete atanmış kullanıcıları döndürür
+   */
+  static async getCompanyManagers(companyId: string) {
+    const assignments = await UserCompanyBranch.find({ 
+      company: companyId, 
+      branch: null,  // Şirket seviyesinde atama
+      isActive: true 
+    })
+      .populate({
+        path: "user",
+        populate: {
+          path: "role",
+          model: "Role"
+        }
+      })
+      .sort({ createdAt: -1 });
+
+    // Rol adı kontrolü - "şirket-yöneticisi" olmalı
+    const managers = assignments.filter((assignment: any) => {
+      const user = assignment.user;
+      if (!user || !user.role) return false;
+      
+      const role = typeof user.role === 'string' ? null : user.role;
+      if (!role || !role.name) return false;
+      
+      // Rol adı kontrolü (büyük/küçük harf duyarsız, tire veya boşluk olabilir)
+      const roleName = role.name.toLowerCase().trim();
+      return roleName === 'şirket-yöneticisi' || 
+             roleName === 'şirket yöneticisi' ||
+             roleName === 'sirket-yoneticisi' ||
+             roleName === 'sirket yoneticisi';
+    });
+
+    return managers;
+  }
+
+  /**
+   * Şube yöneticilerini getirir
+   * Rolü "şube-yöneticisi" olan ve bu şubeye atanmış kullanıcıları döndürür
+   */
+  static async getBranchManagers(branchId: string) {
+    const assignments = await UserCompanyBranch.find({ 
+      branch: branchId,
+      isActive: true 
+    })
+      .populate({
+        path: "user",
+        populate: {
+          path: "role",
+          model: "Role"
+        }
+      })
+      .populate("branch")
+      .sort({ createdAt: -1 });
+
+    // Rol adı kontrolü - "şube-yöneticisi" olmalı
+    const managers = assignments.filter((assignment: any) => {
+      const user = assignment.user;
+      if (!user || !user.role) return false;
+      
+      const role = typeof user.role === 'string' ? null : user.role;
+      if (!role || !role.name) return false;
+      
+      // Rol adı kontrolü (büyük/küçük harf duyarsız, tire veya boşluk olabilir)
+      const roleName = role.name.toLowerCase().trim();
+      return roleName === 'şube-yöneticisi' || 
+             roleName === 'şube yöneticisi' ||
+             roleName === 'sube-yoneticisi' ||
+             roleName === 'sube yoneticisi';
+    });
+
+    return managers;
   }
 }

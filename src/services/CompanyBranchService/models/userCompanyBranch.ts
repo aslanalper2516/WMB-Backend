@@ -5,12 +5,6 @@ const userCompanyBranchSchema = new mongoose.Schema(
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     company: { type: mongoose.Schema.Types.ObjectId, ref: "Company", required: true },
     branch: { type: mongoose.Schema.Types.ObjectId, ref: "Branch" }, // Opsiyonel - company seviyesinde atama için
-    isManager: { type: Boolean, default: false }, // Yönetici mi?
-    managerType: { 
-      type: String, 
-      enum: ["company", "branch"], 
-      default: null 
-    }, // "company" veya "branch" yöneticisi
     isActive: { type: Boolean, default: true }
   },
   { timestamps: true }
