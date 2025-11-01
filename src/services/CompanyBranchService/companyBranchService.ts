@@ -216,8 +216,8 @@ export class CompanyBranchService {
     }
 
     // Super-admin rolüne sahip kullanıcılar şirket/şubeye atanamaz
-    if (user.role) {
-      const role = typeof user.role === 'string' ? null : user.role;
+    if (user.role && typeof user.role === 'object') {
+      const role = user.role as any;
       if (role && role.name) {
         const roleName = role.name.toLowerCase().trim();
         if (roleName === 'super-admin' || roleName === 'super admin') {
@@ -255,8 +255,8 @@ export class CompanyBranchService {
     }
 
     // Şirket-yöneticisi rolüne sahip kullanıcılar şubeye atanamaz (sadece şirket seviyesinde atanabilir)
-    if (user.role) {
-      const role = typeof user.role === 'string' ? null : user.role;
+    if (user.role && typeof user.role === 'object') {
+      const role = user.role as any;
       if (role && role.name) {
         const roleName = role.name.toLowerCase().trim();
         if ((roleName === 'şirket-yöneticisi' || roleName === 'şirket yöneticisi' || 
