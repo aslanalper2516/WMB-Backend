@@ -175,12 +175,12 @@ async function seedDatabase() {
     // Not: User modelinde company ve branch alanları yoktur.
     // Bu ilişkiler UserCompanyBranch tablosunda tanımlanır.
     console.log("👤 Creating user...");
-    const hashedPassword = await bcrypt.hash("240911Mf..", 12);
+    const hashedPassword = await bcrypt.hash("wmbadmin123.2026", 12);
     const user = await User.findOneAndUpdate(
       { email: "aslanalper2516@gmail.com" },
       {
-        name: "Alper Aslan",
-        email: "aslanalper2516@gmail.com",
+        name: "WMB ADMİN",
+        email: "adminwmb@gmail.com",
         password: hashedPassword,
         role: superAdminRole._id
       },
@@ -188,54 +188,8 @@ async function seedDatabase() {
     );
     console.log("✅ User created.");
 
-    // 4️⃣ Company oluştur
-    // Not: Company modelinde manager, managerEmail, managerPhone alanları yoktur.
-    // Not: Yönetici bilgisi User modelindeki role alanında tutulur.
-    //      UserCompanyBranch tablosu sadece kullanıcı-şirket-şube ilişkilerini tutar.
-    console.log("🏢 Creating company...");
-    const company = await Company.findOneAndUpdate(
-      { name: "WMB Yazılım" },
-      {
-        name: "WMB Yazılım",
-        email: "wmbyazilim@wmb.net",
-        phone: "+90 537 797 9125",
-        province: "İstanbul",
-        district: "Kağıthane",
-        neighborhood: "Merkez Mahallesi",
-        street: "Teknoloji Caddesi",
-        address: "Kağıthane/İstanbul"
-      },
-      { upsert: true, new: true }
-    );
-    console.log("✅ Company created.");
+    
 
-    // 5️⃣ Branch oluştur
-    // Not: Branch modelinde manager, managerEmail, managerPhone alanları yoktur.
-    // Not: Yönetici bilgisi User modelindeki role alanında tutulur.
-    //      UserCompanyBranch tablosu sadece kullanıcı-şirket-şube ilişkilerini tutar.
-    console.log("🏪 Creating branch...");
-    const branch = await Branch.findOneAndUpdate(
-      { name: "Kağıthane Şubesi" },
-      {
-        name: "Kağıthane Şubesi",
-        email: "kagithane@wmb.net",
-        phone: "+90 537 797 9125",
-        province: "İstanbul",
-        district: "Kağıthane",
-        neighborhood: "Merkez Mahallesi",
-        street: "Teknoloji Caddesi",
-        address: "Kağıthane/İstanbul",
-        company: company._id,
-        tables: 0
-      },
-      { upsert: true, new: true }
-    );
-    console.log("✅ Branch created.");
-
-    // 5.5️⃣ UserCompanyBranch ilişkisi oluştur
-    // Not: Super-admin rolüne sahip kullanıcılar şirket/şubeye atanamaz.
-    //      Bu yüzden seed dosyasında super-admin rolüne sahip kullanıcıya şirket/şube ataması yapılmaz.
-    console.log("ℹ️ Skipping user-company-branch relationship for super-admin user.");
 
     // 6️⃣ RolePermission ilişkilerini oluştur
     console.log("🔗 Creating role-permission relationships...");
@@ -257,112 +211,6 @@ async function seedDatabase() {
     }
     console.log("✅ Role-permission relationships created.");
 
-    // 7️⃣ Sales Methods oluştur
-    console.log("🛒 Creating sales methods...");
-    
-    // Ana kategorileri oluştur
-    const internetSales = await SalesMethod.findOneAndUpdate(
-      { name: "İnternet Satışları" },
-      {
-        name: "İnternet Satışları",
-        description: "Online platformlar üzerinden yapılan satışlar",
-        parent: null
-      },
-      { upsert: true, new: true }
-    );
-
-    const restaurantSales = await SalesMethod.findOneAndUpdate(
-      { name: "Restoranda Satış" },
-      {
-        name: "Restoranda Satış",
-        description: "Restoran içinde yapılan satışlar",
-        parent: null
-      },
-      { upsert: true, new: true }
-    );
-
-    const takeawaySales = await SalesMethod.findOneAndUpdate(
-      { name: "Gel-Al Satışları" },
-      {
-        name: "Gel-Al Satışları",
-        description: "Müşterinin gelip aldığı satışlar",
-        parent: null
-      },
-      { upsert: true, new: true }
-    );
-
-    // Alt kategorileri oluştur
-    await SalesMethod.findOneAndUpdate(
-      { name: "Trendyol" },
-      {
-        name: "Trendyol",
-        description: "Trendyol platformu üzerinden satış",
-        parent: internetSales._id
-      },
-      { upsert: true, new: true }
-    );
-
-    await SalesMethod.findOneAndUpdate(
-      { name: "Yemeksepeti" },
-      {
-        name: "Yemeksepeti",
-        description: "Yemeksepeti platformu üzerinden satış",
-        parent: internetSales._id
-      },
-      { upsert: true, new: true }
-    );
-
-    await SalesMethod.findOneAndUpdate(
-      { name: "Getir" },
-      {
-        name: "Getir",
-        description: "Getir platformu üzerinden satış",
-        parent: internetSales._id
-      },
-      { upsert: true, new: true }
-    );
-
-    await SalesMethod.findOneAndUpdate(
-      { name: "Masada Yeme" },
-      {
-        name: "Masada Yeme",
-        description: "Restoran masasında yeme",
-        parent: restaurantSales._id
-      },
-      { upsert: true, new: true }
-    );
-
-    await SalesMethod.findOneAndUpdate(
-      { name: "Bar Siparişi" },
-      {
-        name: "Bar Siparişi",
-        description: "Bar bölümünden sipariş",
-        parent: restaurantSales._id
-      },
-      { upsert: true, new: true }
-    );
-
-    await SalesMethod.findOneAndUpdate(
-      { name: "Paket Servis" },
-      {
-        name: "Paket Servis",
-        description: "Paket halinde servis",
-        parent: takeawaySales._id
-      },
-      { upsert: true, new: true }
-    );
-
-    await SalesMethod.findOneAndUpdate(
-      { name: "Drive Thru" },
-      {
-        name: "Drive Thru",
-        description: "Arabadan sipariş alma",
-        parent: takeawaySales._id
-      },
-      { upsert: true, new: true }
-    );
-
-    console.log("✅ Sales methods created.");
 
     console.log("\n🎉 Database seeding completed successfully!");
     console.log("📊 Summary:");
