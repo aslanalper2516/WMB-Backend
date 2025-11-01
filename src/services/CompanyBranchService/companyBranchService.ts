@@ -3,6 +3,20 @@ import { Branch } from "./models/branch";
 import { UserCompanyBranch } from "./models/userCompanyBranch";
 import { User } from "../AuthService/models/user";
 import { Kitchen } from "../CategoryProductService/models/kitchen";
+import { Category } from "../CategoryProductService/models/category";
+import { Product } from "../CategoryProductService/models/product";
+import { Ingredient } from "../CategoryProductService/models/ingredient";
+import { IngredientCategory } from "../CategoryProductService/models/ingredientCategory";
+import { Menu } from "../CategoryProductService/models/menu";
+import { BranchSalesMethod } from "../CategoryProductService/models/branchSalesMethod";
+import { ProductKitchen } from "../CategoryProductService/models/productKitchen";
+import { MenuBranch } from "../CategoryProductService/models/menuBranch";
+import { MenuProduct } from "../CategoryProductService/models/menuProduct";
+import { ProductPrice } from "../CategoryProductService/models/productPrice";
+import { ProductIngredients } from "../CategoryProductService/models/productIngredients";
+import { Table } from "../OrderTableService/models/table";
+import { Role } from "../RolePermissionService/models/role";
+import { RolePermission } from "../RolePermissionService/models/rolePermission";
 
 export class CompanyBranchService {
   /* ---------------------------
@@ -87,18 +101,137 @@ export class CompanyBranchService {
   }
 
   static async deleteCompany(id: string) {
-    // Önce şirketi sil
+    const deleteTime = new Date();
+
+    // Şirkete ait şubelerin ID'lerini önce al (silmeden önce)
+    const companyBranches = await Branch.find({ company: id, isDeleted: false }).select('_id');
+    const branchIds = companyBranches.map(b => b._id.toString());
+
+    // Önce şirketi soft delete yap
     const deletedCompany = await Company.findByIdAndUpdate(
       id,
-      { isDeleted: true, deletedAt: new Date() },
+      { isDeleted: true, deletedAt: deleteTime },
       { new: true }
     );
 
     // Şirkete ait tüm şubeleri soft delete yap
     await Branch.updateMany(
       { company: id },
-      { isDeleted: true, deletedAt: new Date() }
+      { isDeleted: true, deletedAt: deleteTime }
     );
+
+    // Şirkete bağlı kullanıcıları önce bul (soft delete yapmadan önce)
+    const userAssignments = await UserCompanyBranch.find({ company: id, isDeleted: false }).select('user');
+    const userIdsSet = new Set(userAssignments.map(a => a.user.toString()));
+    const userIds = Array.from(userIdsSet);
+    if (userIds.length > 0) {
+      await User.updateMany(
+        { _id: { $in: userIds } },
+        { isDeleted: true, deletedAt: deleteTime }
+      );
+    }
+
+    // Şirkete ait kullanıcı atamalarını soft delete yap
+    await UserCompanyBranch.updateMany(
+      { company: id },
+      { isDeleted: true, deletedAt: deleteTime }
+    );
+
+    // Şirkete ait kategorileri soft delete yap
+    await Category.updateMany(
+      { company: id },
+      { isDeleted: true, deletedAt: deleteTime }
+    );
+
+    // Şirkete ait ürünleri soft delete yap
+    await Product.updateMany(
+      { company: id },
+      { isDeleted: true, deletedAt: deleteTime }
+    );
+
+    // Şirkete ait malzemeleri soft delete yap
+    await Ingredient.updateMany(
+      { company: id },
+      { isDeleted: true, deletedAt: deleteTime }
+    );
+
+    // Şirkete ait malzeme kategorilerini soft delete yap
+    await IngredientCategory.updateMany(
+      { company: id },
+      { isDeleted: true, deletedAt: deleteTime }
+    );
+
+    // Şirkete ait menüleri soft delete yap
+    await Menu.updateMany(
+      { company: id },
+      { isDeleted: true, deletedAt: deleteTime }
+    );
+
+    // Şirkete ait mutfakları soft delete yap
+    await Kitchen.updateMany(
+      { company: id },
+      { isDeleted: true, deletedAt: deleteTime }
+    );
+
+    // Şirketin şubelerine ait masaları soft delete yap
+    if (branchIds.length > 0) {
+      await Table.updateMany(
+        { branch: { $in: branchIds } },
+        { isDeleted: true, deletedAt: deleteTime }
+      );
+    }
+
+    // Şirketin şubelerine ait satış yöntemlerini soft delete yap
+    if (branchIds.length > 0) {
+      await BranchSalesMethod.updateMany(
+        { branch: { $in: branchIds } },
+        { isDeleted: true, deletedAt: deleteTime }
+      );
+    }
+
+    // Şirketin şubelerine ait ürün-mutfak ilişkilerini soft delete yap
+    if (branchIds.length > 0) {
+      await ProductKitchen.updateMany(
+        { branch: { $in: branchIds } },
+        { isDeleted: true, deletedAt: deleteTime }
+      );
+    }
+
+    // Şirketin şubelerine ait menü-şube ilişkilerini soft delete yap
+    if (branchIds.length > 0) {
+      await MenuBranch.updateMany(
+        { branch: { $in: branchIds } },
+        { isDeleted: true, deletedAt: deleteTime }
+      );
+    }
+
+    // Şirkete ait ürün fiyatlarını soft delete yap
+    await ProductPrice.updateMany(
+      { company: id },
+      { isDeleted: true, deletedAt: deleteTime }
+    );
+
+    // Şirkete ait ürün malzeme ilişkilerini soft delete yap
+    await ProductIngredients.updateMany(
+      { company: id },
+      { isDeleted: true, deletedAt: deleteTime }
+    );
+
+    // Şirketin şubelerine ait rolleri soft delete yap
+    if (branchIds.length > 0) {
+      await Role.updateMany(
+        { branch: { $in: branchIds } },
+        { isDeleted: true, deletedAt: deleteTime }
+      );
+    }
+
+    // Şirketin şubelerine ait rol-izin ilişkilerini soft delete yap
+    if (branchIds.length > 0) {
+      await RolePermission.updateMany(
+        { branch: { $in: branchIds } },
+        { isDeleted: true, deletedAt: deleteTime }
+      );
+    }
 
     return deletedCompany;
   }

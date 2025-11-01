@@ -9,7 +9,16 @@ const productIngredientsSchema = new mongoose.Schema({
   amountUnit: { type: mongoose.Schema.Types.ObjectId, ref: "AmountUnit", required: true },
   price: { type: Number, default: 0 }, // 0 = ücretsiz
   priceUnit: { type: mongoose.Schema.Types.ObjectId, ref: "CurrencyUnit", required: true },
-  isDefault: { type: Boolean, default: false }
+  isDefault: { type: Boolean, default: false },
+  
+  // 🧩 Soft delete alanları
+  isDeleted: { type: Boolean, default: false },
+  deletedAt: { type: Date, default: null },
 }, { timestamps: true });
+
+productIngredientsSchema.pre(/^find/, function (next) {
+  (this as any).where({ isDeleted: { $ne: true } });
+  next();
+});
 
 export const ProductIngredients = mongoose.model("ProductIngredients", productIngredientsSchema);

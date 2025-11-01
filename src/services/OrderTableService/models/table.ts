@@ -10,9 +10,18 @@ const tableSchema = new mongoose.Schema(
       enum: ["empty", "occupied", "reserved"],
       default: "empty"
     },
-    isActive: { type: Boolean, default: true }
+    isActive: { type: Boolean, default: true },
+    
+    // 🧩 Soft delete alanları
+    isDeleted: { type: Boolean, default: false },
+    deletedAt: { type: Date, default: null },
   },
   { timestamps: true }
 );
+
+tableSchema.pre(/^find/, function (next) {
+  (this as any).where({ isDeleted: { $ne: true } });
+  next();
+});
 
 export const Table = mongoose.model("Table", tableSchema);
