@@ -87,12 +87,21 @@ export class CompanyBranchService {
   }
 
   static async deleteCompany(id: string) {
-  return await Company.findByIdAndUpdate(
-    id,
-    { isDeleted: true, deletedAt: new Date() },
-    { new: true }
-  );
-}
+    // Önce şirketi sil
+    const deletedCompany = await Company.findByIdAndUpdate(
+      id,
+      { isDeleted: true, deletedAt: new Date() },
+      { new: true }
+    );
+
+    // Şirkete ait tüm şubeleri soft delete yap
+    await Branch.updateMany(
+      { company: id },
+      { isDeleted: true, deletedAt: new Date() }
+    );
+
+    return deletedCompany;
+  }
 
   // ✅ Silinen şirketleri listele
   static async getDeletedCompanies() {
